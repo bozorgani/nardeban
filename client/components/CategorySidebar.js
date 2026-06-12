@@ -92,27 +92,91 @@ export default function CategorySidebar({ tree = [] }) {
   return (
     <aside className="md:sticky md:top-[76px] md:max-h-[calc(100dvh-92px)] md:self-start md:overflow-y-auto md:pb-4">
       <div className="space-y-6 text-sm lg:border-l lg:border-gray-100 lg:pl-5">
-        {/* موبایل: چیپ‌های افقی دسته‌ها */}
-        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 md:hidden">
-          <a
-            href="/categories"
-            className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-brand bg-brand-light px-3.5 py-2 text-xs font-bold text-brand"
-          >
-            🗂️ همهٔ دسته‌ها
-          </a>
-          {tree.map((p) => (
-            <button
-              key={p._id}
-              onClick={() => pickCategory(active === p.slug ? '' : p.slug)}
-              className={`flex-shrink-0 rounded-full border px-3.5 py-2 text-xs transition ${
-                activePath[0] === p.slug
-                  ? 'border-brand bg-brand font-bold text-white'
-                  : 'border-gray-200 bg-white text-gray-600'
-              }`}
-            >
-              {p.icon} {p.name}
-            </button>
-          ))}
+        {/* موبایل: تایل‌های آیکونی دسته‌ها (سبک دیوار) */}
+        <div className="md:hidden">
+          <div className="mb-2.5 flex items-center justify-between">
+            <h2 className="text-sm font-extrabold text-gray-800">دسته‌بندی‌ها</h2>
+            <a href="/categories" className="text-xs font-bold text-brand">
+              مشاهده همه ◀
+            </a>
+          </div>
+          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
+            {tree.map((p) => {
+              const isActive = activePath[0] === p.slug;
+              return (
+                <button
+                  key={p._id}
+                  onClick={() => pickCategory(isActive ? '' : p.slug)}
+                  className="flex w-[4.5rem] flex-shrink-0 flex-col items-center gap-1.5"
+                >
+                  <span
+                    className={`flex h-14 w-14 items-center justify-center rounded-2xl text-2xl transition ${
+                      isActive
+                        ? 'bg-brand text-white shadow-lg shadow-brand/30 ring-2 ring-brand'
+                        : 'border border-gray-100 bg-gray-50'
+                    }`}
+                  >
+                    {p.icon}
+                  </span>
+                  <span
+                    className={`w-full truncate text-center text-[10px] leading-4 ${
+                      isActive ? 'font-bold text-brand' : 'text-gray-600'
+                    }`}
+                  >
+                    {p.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* زیردسته‌های دسته انتخابی — چیپ‌های افقی زیر تایل‌ها */}
+          {activePath[0] && (
+            <div className="-mx-4 mt-1 flex items-center gap-2 overflow-x-auto px-4 pb-1">
+              {(tree.find((p) => p.slug === activePath[0])?.children || []).map((c) => {
+                const subActive = active === c.slug || activePath[1] === c.slug;
+                return (
+                  <button
+                    key={c._id}
+                    onClick={() => pickCategory(subActive && active === c.slug ? activePath[0] : c.slug)}
+                    className={`flex-shrink-0 rounded-full border px-3.5 py-1.5 text-[11px] transition ${
+                      subActive
+                        ? 'border-brand bg-brand-light font-bold text-brand'
+                        : 'border-gray-200 bg-white text-gray-600'
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* سطح سوم — اگر زیردسته‌ای با فرزند انتخاب شده */}
+          {activePath[1] &&
+            (() => {
+              const lvl2 = tree
+                .find((p) => p.slug === activePath[0])
+                ?.children?.find((c) => c.slug === activePath[1]);
+              if (!lvl2?.children?.length) return null;
+              return (
+                <div className="-mx-4 mt-1.5 flex items-center gap-2 overflow-x-auto px-4 pb-1">
+                  {lvl2.children.map((g) => (
+                    <button
+                      key={g._id}
+                      onClick={() => pickCategory(active === g.slug ? activePath[1] : g.slug)}
+                      className={`flex-shrink-0 rounded-full px-3 py-1 text-[10px] transition ${
+                        active === g.slug
+                          ? 'bg-brand font-bold text-white'
+                          : 'bg-gray-100 text-gray-500'
+                      }`}
+                    >
+                      {g.name}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
         </div>
 
         {/* دسکتاپ: درخت ۳ سطحی */}

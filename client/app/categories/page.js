@@ -92,35 +92,26 @@ export default function CategoriesPage() {
     );
   }
 
-  /* ---------- سطح ۱: دسته‌های اصلی ---------- */
+  /* ---------- سطح ۱: گرید تایل‌های آیکونی (سبک دیوار) ---------- */
   return (
     <div className="mx-auto max-w-md">
-      <h1 className="mb-4 text-xl font-extrabold text-gray-900">🗂️ دسته‌بندی‌ها</h1>
-      <div className="divide-y divide-gray-50 overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <h1 className="mb-4 text-xl font-extrabold text-gray-900">دسته‌بندی‌ها</h1>
+
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
         {tree.map((p) => (
           <button
             key={p._id}
             onClick={() =>
               p.children?.length ? setParent(p) : router.push(`/?category=${p.slug}`)
             }
-            className="flex w-full items-center gap-4 px-5 py-4 text-right transition hover:bg-gray-50"
+            className="fade-up group flex flex-col items-center gap-2 rounded-2xl border border-gray-100 bg-white p-4 transition hover:-translate-y-0.5 hover:border-brand/30 hover:shadow-md"
           >
-            <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100 text-xl">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-50 text-3xl transition group-hover:scale-110">
               {p.icon}
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-base font-bold text-gray-800">{p.name}</span>
-              {p.children?.length > 0 && (
-                <span className="block truncate text-xs text-gray-400">
-                  {p.children
-                    .slice(0, 3)
-                    .map((c) => c.name)
-                    .join('، ')}
-                  {p.children.length > 3 ? ' و...' : ''}
-                </span>
-              )}
+            <span className="w-full truncate text-center text-xs font-bold leading-5 text-gray-700">
+              {p.name}
             </span>
-            <span className="text-gray-300">◀</span>
           </button>
         ))}
       </div>
