@@ -39,7 +39,15 @@ export default async function HomePage({ searchParams }) {
   const titleParts = [];
   if (params.q) titleParts.push(`جستجوی «${params.q}»`);
   if (activeCat) titleParts.push(activeCat.name);
-  if (params.city) titleParts.push(`در ${params.city}`);
+  if (params.city) {
+    const cityList = String(params.city).split(',').filter(Boolean);
+    // یک شهر → نام شهر | چند شهر → «۲ شهر»
+    titleParts.push(
+      cityList.length === 1
+        ? `در ${cityList[0]}`
+        : `در ${cityList.length.toLocaleString('fa-IR')} شهر`
+    );
+  }
   const heading = titleParts.length ? titleParts.join(' ') : 'همهٔ آگهی‌ها';
 
   return (

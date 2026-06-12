@@ -2,7 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CITIES, digitsOnly } from '../lib/api';
+import { digitsOnly } from '../lib/api';
+import { cityLabel, parseCities } from '../lib/cities';
+import CityModal from './CityModal';
 
 export default function CategorySidebar({ tree = [] }) {
   const router = useRouter();
@@ -13,6 +15,8 @@ export default function CategorySidebar({ tree = [] }) {
     (p) => p.slug === active || p.children?.some((c) => c.slug === active)
   )?.slug;
   const [open, setOpen] = useState(activeParent || null);
+  const [cityOpen, setCityOpen] = useState(false);
+  const cities = parseCities(params.get('city'));
 
   const setParam = (key, value) => {
     const sp = new URLSearchParams(params.toString());
@@ -84,16 +88,32 @@ export default function CategorySidebar({ tree = [] }) {
       {/* شهر — در موبایل از دکمه بالای صفحه انتخاب می‌شود */}
       <div className="hidden md:block">
         <h2 className="mb-3 text-xs font-bold text-gray-400">شهر</h2>
-        <select
-          value={params.get('city') || ''}
-          onChange={(e) => setParam('city', e.target.value)}
-          className="w-full rounded-lg border border-gray-300 bg-white px-2.5 py-2 outline-none focus:border-brand"
+        <button
+          onClick={() => setCityOpen(true)}
+          className="flex w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-2.5 py-2 text-right outline-none transition hover:border-brand"
         >
-          <option value="">همه شهرها</option>
-          {CITIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
+          <span className={cities.length ? 'font-bold text-gray-800' : 'text-gray-500'}>
+            {cityLabel(cities)}
+          </span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
+            <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z" /><circle cx="12" cy="10" r="3" />
+          </svg>
+        </button>
+        {cities.length > 1 && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {cities.map((c) => (
+              <span key={c} className="rounded-full bg-brand-light px-2 py-0.5 text-[10px] font-bold text-brand">
+                {c}
+              </span>
+            ))}
+          </div>
+        )}
+        <CityModal
+          open={cityOpen}
+          onClose={() => setCityOpen(false)}
+          selected={cities}
+          onApply={(list) => setParam('city', list.join(','))}
+        />
       </div>
 
       {/* قیمت — فقط دسکتاپ */}

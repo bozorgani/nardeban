@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>آفلاین — نردبان</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: Vazirmatn, Tahoma, sans-serif;
+      background: #fff;
+      color: #1f2937;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card { text-align: center; max-width: 320px; }
+    .icon {
+      width: 88px; height: 88px; margin: 0 auto 20px;
+      background: #fdf1f1; border-radius: 28px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 40px;
+    }
+    h1 { font-size: 20px; font-weight: 800; margin-bottom: 10px; }
+    p { font-size: 14px; line-height: 1.9; color: #6b7280; margin-bottom: 24px; }
+    button {
+      font-family: inherit; cursor: pointer;
+      background: #a62626; color: #fff; border: 0;
+      padding: 13px 36px; border-radius: 14px;
+      font-size: 14px; font-weight: 700;
+      box-shadow: 0 4px 14px rgba(166,38,38,.3);
+      transition: background .2s;
+    }
+    button:hover { background: #8b1e1e; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📡</div>
+    <h1>اتصال اینترنت برقرار نیست</h1>
+    <p>به نظر می‌رسد آفلاین هستید. اتصال خود را بررسی کنید و دوباره تلاش کنید.</p>
+    <button onclick="location.reload()">تلاش مجدد</button>
+  </div>
+</body>
+</html>

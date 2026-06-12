@@ -36,7 +36,12 @@ router.get('/', async (req, res, next) => {
         }));
       }
     }
-    if (city) filter.city = normalizeFa(city);
+    if (city) {
+      // پشتیبانی چند شهر: city=تهران,کاشان,اصفهان
+      const cities = String(city).split(',').map((c) => normalizeFa(c)).filter(Boolean);
+      if (cities.length === 1) filter.city = cities[0];
+      else if (cities.length > 1) filter.city = { $in: cities };
+    }
     if (category) {
       const cat = await Category.findOne({ slug: category });
       if (cat) {

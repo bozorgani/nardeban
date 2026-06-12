@@ -2,10 +2,29 @@ import './globals.css';
 import { AuthProvider } from '../lib/AuthContext';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
+import PWA from '../components/PWA';
 
 export const metadata = {
   title: 'نردبان | نیازمندی‌های رایگان',
   description: 'خرید و فروش، استخدام، املاک و خودرو — شبیه دیوار',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    title: 'نردبان',
+    statusBarStyle: 'default',
+  },
+  icons: {
+    icon: '/icons/icon-192.png',
+    apple: '/icons/apple-touch-icon.png',
+  },
+};
+
+export const viewport = {
+  themeColor: '#a62626',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }) {
@@ -25,6 +44,7 @@ export default function RootLayout({ children }) {
             نردبان — پروژه نمونه آموزشی (کلون دیوار) ⚒️
           </footer>
           <BottomNav />
+          <PWA />
         </AuthProvider>
       </body>
     </html>

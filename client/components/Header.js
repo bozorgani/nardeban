@@ -6,6 +6,8 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
 import { api, CITIES } from '../lib/api';
 import { useSocket } from '../lib/useSocket';
+import { cityLabel, parseCities } from '../lib/cities';
+import CityModal from './CityModal';
 
 function ChatLink() {
   const { user } = useAuth();
@@ -49,7 +51,7 @@ function SearchBar() {
   const params = useSearchParams();
   const [q, setQ] = useState(params.get('q') || '');
   const [cityOpen, setCityOpen] = useState(false);
-  const city = params.get('city') || '';
+  const cities = parseCities(params.get('city'));
 
   // وقتی URL عوض شد، مقدار باکس همگام بماند
   useEffect(() => {
@@ -66,12 +68,11 @@ function SearchBar() {
     router.push(`/?${sp.toString()}`);
   };
 
-  const setCity = (c) => {
+  const applyCities = (list) => {
     const sp = new URLSearchParams(params.toString());
-    if (c) sp.set('city', c);
+    if (list.length) sp.set('city', list.join(','));
     else sp.delete('city');
     sp.delete('page');
-    setCityOpen(false);
     router.push(`/?${sp.toString()}`);
   };
 
@@ -97,62 +98,25 @@ function SearchBar() {
           </button>
         </div>
 
-        {/* شهر انتخابی — موبایل: دکمه + پاپ‌آپ | دسکتاپ: select */}
+        {/* دکمه شهر — موبایل و دسکتاپ، باز کردن مودال کامل */}
         <button
           type="button"
           onClick={() => setCityOpen(true)}
-          className="flex shrink-0 items-center gap-1 rounded-xl border border-gray-200 bg-white px-2.5 py-2.5 text-sm font-bold text-gray-700 transition hover:border-gray-300 md:hidden"
+          className="flex shrink-0 items-center gap-1.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm font-bold text-gray-700 transition hover:border-gray-300"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z" /><circle cx="12" cy="10" r="3" />
           </svg>
-          {city || 'همه شهرها'}
+          {cityLabel(cities)}
         </button>
-        <select
-          value={city}
-          onChange={(e) => setCity(e.target.value)}
-          className="hidden rounded-xl border border-gray-200 bg-white px-2.5 py-2.5 text-sm outline-none focus:border-brand md:block"
-        >
-          <option value="">همه شهرها</option>
-          {CITIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
-          ))}
-        </select>
       </form>
 
-      {/* پاپ‌آپ انتخاب شهر (موبایل) */}
-      {cityOpen && (
-        <div className="fixed inset-0 z-[60] md:hidden" onClick={() => setCityOpen(false)}>
-          <div className="absolute inset-0 bg-black/40" />
-          <div
-            className="absolute inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-3xl bg-white p-5 pb-8"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-200" />
-            <h3 className="mb-3 text-base font-extrabold text-gray-800">انتخاب شهر</h3>
-            <ul className="divide-y divide-gray-50">
-              <li>
-                <button
-                  onClick={() => setCity('')}
-                  className={`w-full py-3 text-right text-sm ${!city ? 'font-bold text-brand' : 'text-gray-700'}`}
-                >
-                  همه شهرها {!city && '✓'}
-                </button>
-              </li>
-              {CITIES.map((c) => (
-                <li key={c}>
-                  <button
-                    onClick={() => setCity(c)}
-                    className={`w-full py-3 text-right text-sm ${city === c ? 'font-bold text-brand' : 'text-gray-700'}`}
-                  >
-                    {c} {city === c && '✓'}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
+      <CityModal
+        open={cityOpen}
+        onClose={() => setCityOpen(false)}
+        selected={cities}
+        onApply={applyCities}
+      />
     </>
   );
 }
