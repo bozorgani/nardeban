@@ -165,25 +165,80 @@ export default function Header() {
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setMenuOpen((v) => !v)}
-                className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2.5 text-sm transition hover:border-gray-300"
+                className={`flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-sm transition ${
+                  menuOpen ? 'border-brand bg-brand-light' : 'border-gray-200 hover:border-gray-300'
+                }`}
+                aria-expanded={menuOpen}
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6" />
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-light text-xs font-black text-brand">
+                  {(user.name || 'ن').charAt(0)}
+                </span>
+                <span className="hidden max-w-24 truncate sm:inline">{user.name || 'نردبان من'}</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`text-gray-400 transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`}>
+                  <path d="m6 9 6 6 6-6" />
                 </svg>
-                <span className="hidden sm:inline">{user.name || 'نردبان من'}</span>
               </button>
+
               {menuOpen && (
                 <div
-                  className="absolute left-0 mt-2 w-48 overflow-hidden rounded-xl border border-gray-200 bg-white text-sm shadow-xl"
+                  className="dialog-in absolute left-0 mt-2 w-64 overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-2xl shadow-gray-900/10"
                   onClick={() => setMenuOpen(false)}
                 >
-                  <div className="border-b bg-gray-50 px-4 py-2.5 text-xs text-gray-500" dir="ltr">{user.phone}</div>
-                  <Link href="/my-ads" className="block px-4 py-2.5 hover:bg-gray-50">📋 آگهی‌های من</Link>
-                  <Link href="/chat" className="block px-4 py-2.5 hover:bg-gray-50">💬 چت و تماس</Link>
-                  <Link href="/favorites" className="block px-4 py-2.5 hover:bg-gray-50">❤️ نشان‌شده‌ها</Link>
-                  <button onClick={logout} className="block w-full px-4 py-2.5 text-right text-red-600 hover:bg-red-50">
-                    خروج
-                  </button>
+                  {/* هدر مینی‌پروفایل */}
+                  <Link href="/me" className="block bg-gradient-to-l from-brand to-brand-dark p-4 transition hover:opacity-95">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 text-base font-black text-white backdrop-blur">
+                        {(user.name || 'ن').charAt(0)}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-extrabold text-white">{user.name || 'کاربر نردبان'}</span>
+                        <span className="block text-[11px] text-white/70" dir="ltr">{user.phone}</span>
+                      </span>
+                      <span className="rounded-lg bg-white/15 px-2 py-1 text-[10px] font-bold text-white">پروفایل ◀</span>
+                    </div>
+                  </Link>
+
+                  {/* آیتم‌ها */}
+                  <div className="p-2 text-sm">
+                    {[
+                      { href: '/my-ads', label: 'آگهی‌های من', desc: 'مدیریت و وضعیت', color: 'bg-blue-50 text-blue-500', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h10M7 13h6"/></svg> },
+                      { href: '/chat', label: 'چت و تماس', desc: 'گفتگوهای فعال', color: 'bg-green-50 text-green-600', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> },
+                      { href: '/favorites', label: 'نشان‌شده‌ها', desc: 'آگهی‌های ذخیره‌شده', color: 'bg-rose-50 text-rose-500', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M19 14c1.5-1.5 2.5-3.2 2.5-5A4.5 4.5 0 0 0 17 4.5c-2 0-3.5 1-5 3-1.5-2-3-3-5-3A4.5 4.5 0 0 0 2.5 9c0 1.8 1 3.5 2.5 5l7 7 7-7z"/></svg> },
+                      ...(user.role === 'admin'
+                        ? [{ href: '/admin', label: 'پنل مدیریت', desc: 'داشبورد و تایید آگهی‌ها', color: 'bg-amber-50 text-amber-600', icon: <span className="text-sm">👑</span> }]
+                        : []),
+                    ].map((it) => (
+                      <Link
+                        key={it.href}
+                        href={it.href}
+                        className="group flex items-center gap-3 rounded-xl px-3 py-2.5 transition hover:bg-gray-50"
+                      >
+                        <span className={`flex h-9 w-9 items-center justify-center rounded-xl transition group-hover:scale-105 ${it.color}`}>
+                          {it.icon}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-bold text-gray-800">{it.label}</span>
+                          <span className="block text-[11px] text-gray-400">{it.desc}</span>
+                        </span>
+                        <span className="text-gray-200 transition group-hover:-translate-x-0.5 group-hover:text-brand">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        </span>
+                      </Link>
+                    ))}
+                  </div>
+
+                  {/* خروج */}
+                  <div className="border-t border-gray-50 p-2">
+                    <button
+                      onClick={logout}
+                      className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-red-500 transition hover:bg-red-50"
+                    >
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></svg>
+                      </span>
+                      <span className="font-bold">خروج از حساب</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

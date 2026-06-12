@@ -41,8 +41,10 @@ export default function NewAdWizard() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
-  const [parentCat, setParentCat] = useState(null); // آبجکت دسته والد
-  const [childCat, setChildCat] = useState(null); // آبجکت زیردسته
+  // مسیر انتخاب دسته (پشتیبانی از هر عمق — تا ۳ سطح)
+  const [catPath, setCatPath] = useState([]); // [سطح۱, سطح۲, ...]
+  const currentCat = catPath[catPath.length - 1] || null;
+  const currentChildren = currentCat ? currentCat.children || [] : tree;
 
   const [location, setLocation] = useState(null); // {lat,lng}
   const [city, setCity] = useState('');
@@ -95,8 +97,8 @@ export default function NewAdWizard() {
         if (description.trim().length < 10) return 'توضیحات باید حداقل ۱۰ حرف باشد';
         return '';
       case 2:
-        if (!parentCat) return 'یک دسته‌بندی انتخاب کنید';
-        if (parentCat.children?.length && !childCat) return 'زیردسته را انتخاب کنید';
+        if (!currentCat) return 'یک دسته‌بندی انتخاب کنید';
+        if (currentCat.children?.length) return 'زیردستهٔ دقیق‌تر را انتخاب کنید';
         return '';
       case 3:
         if (!city.trim()) return 'شهر آگهی مشخص نیست — روی نقشه انتخاب یا جستجو کنید';
@@ -111,7 +113,7 @@ export default function NewAdWizard() {
       default:
         return '';
     }
-  }, [step, title, description, parentCat, childCat, city, isFree, price, contactPhone, chatEnabled, callEnabled]);
+  }, [step, title, description, catPath, currentCat, city, isFree, price, contactPhone, chatEnabled, callEnabled]);
 
   const next = () => {
     if (stepError) return setError(stepError);
@@ -131,7 +133,7 @@ export default function NewAdWizard() {
     const fd = new FormData();
     fd.set('title', title.trim());
     fd.set('description', description.trim());
-    fd.set('category', (childCat || parentCat)._id);
+    fd.set('category', currentCat._id);
     fd.set('city', city.trim());
     fd.set('neighborhood', neighborhood.trim());
     if (location) {
@@ -291,69 +293,68 @@ export default function NewAdWizard() {
           </div>
         )}
 
-        {/* ====== مرحله ۲: دسته‌بندی ====== */}
+        {/* ====== مرحله ۲: دسته‌بندی (۳ سطحی) ====== */}
         {step === 2 && (
           <div className="text-sm">
-            {!parentCat ? (
+            {/* بردکرامب مسیر انتخاب */}
+            {catPath.length > 0 && (
+              <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setCatPath([])}
+                  className="rounded-full bg-gray-100 px-3 py-1.5 text-gray-600 transition hover:bg-gray-200"
+                >
+                  همهٔ دسته‌ها
+                </button>
+                {catPath.map((c, i) => (
+                  <span key={c._id} className="flex items-center gap-1.5">
+                    <span className="text-gray-300">›</span>
+                    <button
+                      type="button"
+                      onClick={() => setCatPath(catPath.slice(0, i + 1))}
+                      className={`rounded-full px-3 py-1.5 transition ${
+                        i === catPath.length - 1
+                          ? 'bg-brand-light font-bold text-brand'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {i === 0 && `${c.icon} `}{c.name}
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {currentCat && !currentCat.children?.length ? (
+              <p className="rounded-xl bg-green-50 p-4 text-green-700">
+                ✓ دستهٔ «{currentCat.name}» انتخاب شد — ادامه دهید.
+              </p>
+            ) : (
               <>
-                <p className="mb-3 text-gray-500">دسته‌بندی آگهی را انتخاب کنید:</p>
+                <p className="mb-3 text-gray-500">
+                  {catPath.length === 0 ? 'دسته‌بندی آگهی را انتخاب کنید:' : `زیردستهٔ «${currentCat.name}» را انتخاب کنید:`}
+                </p>
                 <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200">
-                  {tree.map((p) => (
-                    <li key={p._id}>
+                  {currentChildren.map((c) => (
+                    <li key={c._id}>
                       <button
                         type="button"
-                        onClick={() => {
-                          setParentCat(p);
-                          setChildCat(null);
-                        }}
+                        onClick={() => setCatPath([...catPath, c])}
                         className="flex w-full items-center justify-between px-4 py-3.5 transition hover:bg-gray-50"
                       >
                         <span className="flex items-center gap-3">
-                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-xl">
-                            {p.icon}
-                          </span>
-                          <span className="font-bold text-gray-700">{p.name}</span>
+                          {catPath.length === 0 && (
+                            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-xl">
+                              {c.icon}
+                            </span>
+                          )}
+                          <span className="font-bold text-gray-700">{c.name}</span>
                         </span>
-                        <span className="text-gray-300">◀</span>
+                        <span className="text-gray-300">{c.children?.length ? '◀' : '✓'}</span>
                       </button>
                     </li>
                   ))}
                 </ul>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setParentCat(null);
-                    setChildCat(null);
-                  }}
-                  className="mb-3 flex items-center gap-2 text-xs text-gray-500 hover:text-brand"
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-base">{parentCat.icon}</span>
-                  <span className="font-bold">{parentCat.name}</span>
-                  <span className="text-brand underline">تغییر دسته</span>
-                </button>
-                {parentCat.children?.length ? (
-                  <ul className="divide-y divide-gray-100 overflow-hidden rounded-xl border border-gray-200">
-                    {parentCat.children.map((c) => (
-                      <li key={c._id}>
-                        <button
-                          type="button"
-                          onClick={() => setChildCat(c)}
-                          className={`flex w-full items-center justify-between px-4 py-3 transition hover:bg-gray-50 ${
-                            childCat?._id === c._id ? 'bg-brand-light font-bold text-brand' : 'text-gray-700'
-                          }`}
-                        >
-                          {c.name}
-                          {childCat?._id === c._id && <span>✓</span>}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="rounded-xl bg-gray-50 p-4 text-gray-500">این دسته زیرمجموعه ندارد — ادامه دهید.</p>
-                )}
               </>
             )}
           </div>
@@ -504,7 +505,7 @@ export default function NewAdWizard() {
               <h3 className="mb-3 font-extrabold text-gray-700">مرور نهایی آگهی</h3>
               <dl className="space-y-1.5 text-xs leading-6 text-gray-600">
                 <div className="flex gap-2"><dt className="font-bold">عنوان:</dt><dd>{title}</dd></div>
-                <div className="flex gap-2"><dt className="font-bold">دسته:</dt><dd>{parentCat?.icon} {parentCat?.name}{childCat ? ` › ${childCat.name}` : ''}</dd></div>
+                <div className="flex gap-2"><dt className="font-bold">دسته:</dt><dd>{catPath.map((c, i) => (i === 0 ? `${c.icon} ${c.name}` : c.name)).join(' › ')}</dd></div>
                 <div className="flex gap-2"><dt className="font-bold">مکان:</dt><dd>{city}{neighborhood ? `، ${neighborhood}` : ''} {location ? '(روی نقشه ✓)' : ''}</dd></div>
                 <div className="flex gap-2"><dt className="font-bold">قیمت:</dt><dd>{isFree ? 'رایگان' : price ? `${Number(price).toLocaleString('fa-IR')} تومان` : 'توافقی'}</dd></div>
                 {condition && <div className="flex gap-2"><dt className="font-bold">وضعیت:</dt><dd>{condition}</dd></div>}

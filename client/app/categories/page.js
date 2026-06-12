@@ -51,16 +51,42 @@ export default function CategoriesPage() {
             همهٔ آگهی‌های {parent.name}
             <span className="text-gray-300">◀</span>
           </Link>
-          {parent.children?.map((c) => (
-            <Link
-              key={c._id}
-              href={`/?category=${c.slug}`}
-              className="flex items-center justify-between px-5 py-4 text-gray-700 transition hover:bg-gray-50"
-            >
-              {c.name}
-              <span className="text-gray-300">◀</span>
-            </Link>
-          ))}
+          {parent.children?.map((c) =>
+            c.children?.length ? (
+              <details key={c._id} className="group">
+                <summary className="flex cursor-pointer list-none items-center justify-between px-5 py-4 text-gray-700 transition hover:bg-gray-50">
+                  <span className="font-bold">{c.name}</span>
+                  <span className="text-gray-300 transition-transform group-open:rotate-90">◀</span>
+                </summary>
+                <div className="bg-gray-50/60 pb-1">
+                  <Link
+                    href={`/?category=${c.slug}`}
+                    className="block px-8 py-3 text-sm font-bold text-brand transition hover:bg-gray-100/70"
+                  >
+                    همهٔ آگهی‌های {c.name}
+                  </Link>
+                  {c.children.map((g) => (
+                    <Link
+                      key={g._id}
+                      href={`/?category=${g.slug}`}
+                      className="block px-8 py-3 text-sm text-gray-600 transition hover:bg-gray-100/70"
+                    >
+                      {g.name}
+                    </Link>
+                  ))}
+                </div>
+              </details>
+            ) : (
+              <Link
+                key={c._id}
+                href={`/?category=${c.slug}`}
+                className="flex items-center justify-between px-5 py-4 text-gray-700 transition hover:bg-gray-50"
+              >
+                {c.name}
+                <span className="text-gray-300">◀</span>
+              </Link>
+            )
+          )}
         </div>
       </div>
     );

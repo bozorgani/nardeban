@@ -45,8 +45,15 @@ router.get('/', async (req, res, next) => {
     if (category) {
       const cat = await Category.findOne({ slug: category });
       if (cat) {
-        const children = await Category.find({ parent: cat._id }).select('_id');
-        filter.category = { $in: [cat._id, ...children.map((c) => c._id)] };
+        // جمع‌آوری همه نوادگان (هر عمقی) — برای دسته‌بندی ۳ سطحی
+        const ids = [cat._id];
+        let frontier = [cat._id];
+        while (frontier.length) {
+          const children = await Category.find({ parent: { $in: frontier } }).select('_id');
+          frontier = children.map((c) => c._id);
+          ids.push(...frontier);
+        }
+        filter.category = { $in: ids };
       }
     }
     if (minPrice || maxPrice) {

@@ -258,9 +258,16 @@ export default function EditAdPage({ params }) {
               {tree.map((p) =>
                 p.children?.length ? (
                   <optgroup key={p._id} label={`${p.icon} ${p.name}`}>
-                    {p.children.map((c) => (
-                      <option key={c._id} value={c._id}>{c.name}</option>
-                    ))}
+                    {p.children.flatMap((c) =>
+                      c.children?.length
+                        ? [
+                            <option key={c._id} value={c._id} disabled>— {c.name} —</option>,
+                            ...c.children.map((g) => (
+                              <option key={g._id} value={g._id}>{c.name} › {g.name}</option>
+                            )),
+                          ]
+                        : [<option key={c._id} value={c._id}>{c.name}</option>]
+                    )}
                   </optgroup>
                 ) : (
                   <option key={p._id} value={p._id}>{p.icon} {p.name}</option>
