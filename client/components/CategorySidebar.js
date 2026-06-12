@@ -100,14 +100,15 @@ export default function CategorySidebar({ tree = [] }) {
               مشاهده همه ◀
             </a>
           </div>
-          <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2">
+          {/* گرید ۴ ستونه: ۴ + ۴ + ۲ (بدون اسکرول افقی) */}
+          <div className="grid grid-cols-4 gap-x-2 gap-y-3 pb-2">
             {tree.map((p) => {
               const isActive = activePath[0] === p.slug;
               return (
                 <button
                   key={p._id}
                   onClick={() => pickCategory(isActive ? '' : p.slug)}
-                  className="flex w-[4.5rem] flex-shrink-0 flex-col items-center gap-1.5"
+                  className="flex flex-col items-center gap-1.5"
                 >
                   <span
                     className={`flex h-14 w-14 items-center justify-center rounded-2xl text-2xl transition ${
