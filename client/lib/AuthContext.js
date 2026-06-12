@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { api } from './api';
+import { useToast } from '../components/Toast';
 
 const AuthContext = createContext(null);
 
@@ -18,6 +19,7 @@ function setTokenCookie(token) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const toast = useToast(); // ToastProvider بیرون از AuthProvider در layout قرار دارد
 
   const refresh = useCallback(async () => {
     try {
@@ -43,12 +45,19 @@ export function AuthProvider({ children }) {
     localStorage.setItem('nardeban_token', token);
     setTokenCookie(token);
     setUser(userData);
+    toast?.success(
+      userData?.name?.trim()
+        ? `خوش آمدید، ${userData.name} 👋`
+        : 'خوش آمدید 👋',
+      { title: 'ورود موفق' }
+    );
   };
 
   const logout = async () => {
     localStorage.removeItem('nardeban_token');
     setTokenCookie(null);
     setUser(null);
+    toast?.info('از حساب خود خارج شدید — به امید دیدار 👋');
     // بستن اتصال real-time
     try {
       const { destroySocket } = await import('./useSocket');

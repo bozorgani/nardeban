@@ -37,15 +37,15 @@ export default function RootLayout({ children }) {
           precedence="default"
           href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css"
         />
-        <AuthProvider>
-          <ToastProvider>
+        <ToastProvider>
+          <AuthProvider>
             <Header />
             {/* پدینگ پایین در موبایل برای ناوبری ثابت */}
             <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:pb-8">{children}</main>
             <BottomNav />
             <PWA />
-          </ToastProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   );
