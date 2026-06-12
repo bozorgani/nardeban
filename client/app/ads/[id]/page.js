@@ -6,6 +6,7 @@ import AdMap from '../../../components/AdMap';
 import ContactBox from './ContactBox';
 import Gallery from './Gallery';
 import ReportButton from '../../../components/ReportButton';
+import SimilarAds from './SimilarAds';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -201,6 +202,9 @@ export default async function AdPage({ params }) {
           </div>
         </div>
       </div>
+
+      {/* آگهی‌های مشابه — فقط برای آگهی‌های منتشرشده */}
+      {ad.status === 'active' && <SimilarAds adId={String(ad._id)} />}
     </div>
   );
 }

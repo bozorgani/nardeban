@@ -18,6 +18,9 @@ import chatRoutes from './routes/chat.routes.js';
 import pushRoutes from './routes/push.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import reportRoutes from './routes/report.routes.js';
+import savedSearchRoutes from './routes/savedSearch.routes.js';
+import seoRoutes from './routes/seo.routes.js';
+import { startSavedSearchNotifier } from './savedSearchNotifier.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -68,6 +71,8 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/saved-searches', savedSearchRoutes);
+app.use('/api/seo', seoRoutes);
 
 // 404
 app.use((req, res) => res.status(404).json({ message: 'مسیر یافت نشد' }));
@@ -83,7 +88,10 @@ const server = http.createServer(app);
 initSocket(server); // ⚡ چت Real-time
 
 const start = () =>
-  server.listen(PORT, () => console.log(`🚀 API + Socket.io on http://localhost:${PORT}`));
+  server.listen(PORT, () => {
+    console.log(`🚀 API + Socket.io on http://localhost:${PORT}`);
+    startSavedSearchNotifier();
+  });
 
 if (process.env.SKIP_DB_CONNECT === '1') start();
 else connectDB().then(start);

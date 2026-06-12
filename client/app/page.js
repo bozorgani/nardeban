@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import AdFeed from '../components/AdFeed';
 import CategorySidebar from '../components/CategorySidebar';
+import SaveSearchButton from '../components/SaveSearchButton';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const PAGE_SIZE = 24; // تعداد آگهی در هر تکه
@@ -82,11 +83,16 @@ export default async function HomePage({ searchParams }) {
           </div>
         ) : (
           <>
-            <div className="mb-4 flex items-center justify-between">
-              <h1 className="text-base font-extrabold text-gray-800">{heading}</h1>
-              <span className="text-xs text-gray-400">
-                {Number(total).toLocaleString('fa-IR')} آگهی
-              </span>
+            <div className="mb-4 flex items-center justify-between gap-2">
+              <h1 className="min-w-0 truncate text-base font-extrabold text-gray-800">{heading}</h1>
+              <div className="flex flex-shrink-0 items-center gap-2">
+                <Suspense fallback={null}>
+                  <SaveSearchButton catName={activeCat?.name} />
+                </Suspense>
+                <span className="text-xs text-gray-400">
+                  {Number(total).toLocaleString('fa-IR')} آگهی
+                </span>
+              </div>
             </div>
 
             {/* صفحه اول SSR شده؛ بقیه با اسکرول لود می‌شوند */}

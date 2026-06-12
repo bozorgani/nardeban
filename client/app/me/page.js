@@ -167,7 +167,8 @@ export default function MePage() {
       api('/users/favorites'),
       api('/chat/unread-count'),
       api(`/users/${user.id}/profile?limit=1`),
-    ]).then(([adsR, favR, chatR, profR]) => {
+      api('/saved-searches/new-count'),
+    ]).then(([adsR, favR, chatR, profR, ssR]) => {
       const ads = adsR.status === 'fulfilled' ? adsR.value.ads : [];
       setStats({
         active: ads.filter((a) => a.status === 'active').length,
@@ -176,6 +177,7 @@ export default function MePage() {
         favorites: favR.status === 'fulfilled' ? favR.value.favorites.length : 0,
         unread: chatR.status === 'fulfilled' ? chatR.value.total : 0,
         rating: profR.status === 'fulfilled' ? profR.value.rating : { avg: 0, count: 0 },
+        searchNew: ssR.status === 'fulfilled' ? ssR.value.total : 0,
       });
     });
   }, [user]);
@@ -271,6 +273,7 @@ export default function MePage() {
         <MenuItem href="/my-ads" icon={Icon.ads} title="آگهی‌های من" desc="مدیریت، تغییر وضعیت و چت خریداران" color="bg-blue-50 text-blue-500" />
         <MenuItem href="/chat" icon={Icon.chat} title="چت و تماس" desc="گفتگو با خریداران و فروشندگان" badge={stats?.unread} color="bg-green-50 text-green-600" />
         <MenuItem href="/favorites" icon={Icon.heart} title="نشان‌شده‌ها" desc="آگهی‌هایی که ذخیره کرده‌اید" color="bg-rose-50 text-rose-500" />
+        <MenuItem href="/saved-searches" icon={<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>} title="جستجوهای ذخیره‌شده" desc="اعلان آگهی‌های جدید مطابق جستجو" badge={stats?.searchNew} color="bg-cyan-50 text-cyan-600" />
         <MenuItem href={`/users/${user.id}`} icon={Icon.user} title="پروفایل عمومی من" desc="آنچه دیگران از شما می‌بینند" color="bg-violet-50 text-violet-500" />
         <MenuItem href="/new" icon={Icon.plus} title="ثبت آگهی جدید" desc="در ۵ مرحلهٔ ساده" color="bg-brand-light text-brand" />
       </div>
@@ -288,6 +291,13 @@ export default function MePage() {
         {Icon.logout} خروج از حساب
       </button>
 
+      <div className="flex items-center justify-center gap-4 pb-2 text-[11px] text-gray-400">
+        <Link href="/about" className="hover:text-brand">دربارهٔ نردبان</Link>
+        <span className="text-gray-200">|</span>
+        <Link href="/terms" className="hover:text-brand">قوانین</Link>
+        <span className="text-gray-200">|</span>
+        <Link href="/support" className="hover:text-brand">پشتیبانی</Link>
+      </div>
       <p className="pb-2 text-center text-[11px] text-gray-300">نردبان · نسخه ۱.۰</p>
 
       <EditProfileSheet

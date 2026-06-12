@@ -145,6 +145,81 @@ router.get('/mine', requireAuth, async (req, res, next) => {
   }
 });
 
+// آگهی‌های مشابه: همان دسته (اولویت: همان شهر) — برای پایین صفحه آگهی
+router.get('/:id/similar', async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id))
+      return res.status(400).json({ message: 'شناسه نامعتبر' });
+
+    const ad = await Ad.findById(req.params.id).select('category city').lean();
+    if (!ad) return res.status(404).json({ message: 'آگهی یافت نشد' });
+
+    const base = {
+      _id: { $ne: ad._id },
+      status: 'active',
+      category: ad.category,
+    };
+    const sel = 'title price isFree city neighborhood images condition createdAt category';
+
+    // اول همان شهر، سپس بقیه شهرها تا سقف ۶
+    const sameCity = await Ad.find({ ...base, city: ad.city })
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .select(sel)
+      .populate('category', 'name slug icon')
+      .lean();
+
+    let others = [];
+    if (sameCity.length < 6) {
+      others = await Ad.find({ ...base, city: { $ne: ad.city } })
+        .sort({ createdAt: -1 })
+        .limit(6 - sameCity.length)
+        .select(sel)
+        .populate('category', 'name slug icon')
+        .lean();
+    }
+
+    let ads = [...sameCity, ...others];
+
+    // اگر زیردسته کم‌آگهی بود → fallback به کل شاخه دسته ریشه (سطح ۱)
+    if (ads.length < 3) {
+      // بالا رفتن تا ریشه
+      let root = await Category.findById(ad.category).lean();
+      let guard = 0;
+      while (root?.parent && guard++ < 10) {
+        root = await Category.findById(root.parent).lean();
+      }
+      if (root) {
+        // همه نوادگان ریشه (BFS)
+        const ids = [root._id];
+        let frontier = [root._id];
+        while (frontier.length) {
+          const children = await Category.find({ parent: { $in: frontier } }).select('_id');
+          frontier = children.map((c) => c._id);
+          ids.push(...frontier);
+        }
+        const excluded = new Set(ads.map((a) => String(a._id)));
+        const more = await Ad.find({
+          _id: { $ne: ad._id },
+          status: 'active',
+          category: { $in: ids },
+        })
+          .sort({ createdAt: -1 })
+          .limit(8)
+          .select(sel)
+          .populate('category', 'name slug icon')
+          .lean();
+        ads = [...ads, ...more.filter((a) => !excluded.has(String(a._id)))].slice(0, 6);
+      }
+    }
+    for (const a of ads) if (a.images?.length > 1) a.images = [a.images[0]];
+
+    res.json({ ads });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // جزئیات آگهی
 router.get('/:id', optionalAuth, async (req, res, next) => {
   try {
