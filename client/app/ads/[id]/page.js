@@ -66,7 +66,7 @@ export default async function AdPage({ params }) {
       )}
 
       {/* بردکرامب */}
-      <nav className="mb-5 flex items-center gap-1.5 text-sm text-gray-400">
+      <nav className="mb-5 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm text-gray-400">
         <Link href="/" className="hover:text-brand">نردبان</Link>
         <span>›</span>
         <Link href={`/?city=${encodeURIComponent(ad.city)}`} className="hover:text-brand">{ad.city}</Link>
@@ -90,14 +90,16 @@ export default async function AdPage({ params }) {
             </p>
 
             {/* دکمه‌های تماس و نشان */}
-            <div className="mb-6 flex gap-2">
-              <ContactBox
-                adId={ad._id}
-                ownerId={ownerId}
-                phone={ad.contactPhone}
-                callEnabled={ad.callEnabled !== false}
-                chatEnabled={ad.chatEnabled !== false}
-              />
+            <div className="mb-6 flex items-stretch gap-2">
+              <div className="flex min-w-0 flex-1">
+                <ContactBox
+                  adId={ad._id}
+                  ownerId={ownerId}
+                  phone={ad.contactPhone}
+                  callEnabled={ad.callEnabled !== false}
+                  chatEnabled={ad.chatEnabled !== false}
+                />
+              </div>
               <FavoriteButton adId={ad._id} />
             </div>
 

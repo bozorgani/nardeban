@@ -688,10 +688,10 @@ export default function AdminPage() {
           <p className="mt-0.5 text-sm text-gray-400">خوش آمدید، {user.name}</p>
         </div>
         {/* دسترسی سریع شخصی */}
-        <div className="flex gap-2 text-xs">
-          <Link href="/new" className="rounded-xl bg-brand px-3.5 py-2 font-bold text-white transition hover:bg-brand-dark">+ ثبت آگهی</Link>
-          <Link href="/my-ads" className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-gray-600 transition hover:border-gray-300">آگهی‌های من</Link>
-          <Link href="/favorites" className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-gray-600 transition hover:border-gray-300">❤️ نشان‌ها</Link>
+        <div className="-mx-1 flex w-full gap-2 overflow-x-auto px-1 pb-1 text-xs sm:w-auto">
+          <Link href="/new" className="whitespace-nowrap rounded-xl bg-brand px-3.5 py-2 font-bold text-white transition hover:bg-brand-dark">+ ثبت آگهی</Link>
+          <Link href="/my-ads" className="whitespace-nowrap rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-gray-600 transition hover:border-gray-300">آگهی‌های من</Link>
+          <Link href="/favorites" className="whitespace-nowrap rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-gray-600 transition hover:border-gray-300">❤️ نشان‌ها</Link>
         </div>
       </div>
 
