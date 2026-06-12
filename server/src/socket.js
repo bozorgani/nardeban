@@ -5,6 +5,7 @@ import Message from './models/Message.js';
 import User from './models/User.js';
 import Ad from './models/Ad.js';
 import { sendPushToUser } from './push.js';
+import { isAllowedOrigin } from './config/cors.js';
 
 /**
  * معماری Real-time چت:
@@ -25,7 +26,9 @@ export const isUserOnline = (userId) => onlineUsers.has(String(userId));
 export function initSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: {
-      origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000',
+      origin(origin, cb) {
+        cb(null, isAllowedOrigin(origin));
+      },
       credentials: true,
     },
   });

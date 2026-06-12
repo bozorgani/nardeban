@@ -1,4 +1,32 @@
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+/**
+ * آدرس API:
+ *  - سمت سرور (SSR): از env یا localhost
+ *  - سمت مرورگر: اگر env تنظیم نشده یا localhost است ولی سایت با IP باز شده،
+ *    خودکار از همان hostname صفحه استفاده می‌شود (مثلاً http://192.168.1.17:4000)
+ *    → دسترسی از گوشی/شبکه بدون هیچ تنظیمی کار می‌کند.
+ */
+function resolveApiUrl() {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  if (typeof window === 'undefined') return envUrl;
+
+  const pageHost = window.location.hostname;
+  try {
+    const env = new URL(envUrl);
+    // اگر env به localhost اشاره دارد ولی صفحه از host دیگری باز شده → جایگزینی hostname
+    if (
+      (env.hostname === 'localhost' || env.hostname === '127.0.0.1') &&
+      pageHost !== 'localhost' &&
+      pageHost !== '127.0.0.1'
+    ) {
+      return `${window.location.protocol}//${pageHost}:${env.port || 4000}`;
+    }
+  } catch {
+    /* ignore */
+  }
+  return envUrl;
+}
+
+export const API_URL = resolveApiUrl();
 
 export function getToken() {
   if (typeof window === 'undefined') return null;

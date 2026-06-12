@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 import { globalLimiter, otpLimiter, verifyLimiter, writeLimiter } from './middleware/limiters.js';
+import { corsOptions } from './config/cors.js';
 import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
@@ -29,7 +30,7 @@ app.use(
     contentSecurityPolicy: false, // API است؛ CSP سمت فرانت اعمال می‌شود
   })
 );
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000', credentials: true }));
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 
 // پاکسازی اپراتورهای مونگو ($ و .) از ورودی‌ها — ضد NoSQL injection
