@@ -13,6 +13,7 @@ import userRoutes from './routes/user.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import pushRoutes from './routes/push.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import reportRoutes from './routes/report.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -32,6 +33,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/reports', reportRoutes);
 
 // 404
 app.use((req, res) => res.status(404).json({ message: 'مسیر یافت نشد' }));

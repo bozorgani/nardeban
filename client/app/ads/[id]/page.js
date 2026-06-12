@@ -4,6 +4,7 @@ import FavoriteButton from '../../../components/FavoriteButton';
 import AdMap from '../../../components/AdMap';
 import ContactBox from './ContactBox';
 import Gallery from './Gallery';
+import ReportButton from '../../../components/ReportButton';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -167,9 +168,12 @@ export default async function AdPage({ params }) {
               <span className="text-gray-300">◀</span>
             </Link>
 
-            <p className="mb-4 text-sm text-gray-400">
-              👁 {Number(ad.views || 0).toLocaleString('fa-IR')} بازدید · شناسه آگهی: {ad._id.slice(-8)}
-            </p>
+            <div className="mb-4 flex items-center justify-between">
+              <p className="text-sm text-gray-400">
+                👁 {Number(ad.views || 0).toLocaleString('fa-IR')} بازدید · شناسه آگهی: {ad._id.slice(-8)}
+              </p>
+              <ReportButton adId={String(ad._id)} ownerId={String(ownerId)} />
+            </div>
 
             <div className="rounded-xl bg-amber-50 p-4 text-sm leading-7 text-amber-800">
               ⚠️ <b>هشدار:</b> قبل از معامله حتماً کالا را حضوری ببینید، از واریز بیعانه خودداری کنید

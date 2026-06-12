@@ -435,6 +435,197 @@ function ReviewsTab() {
   );
 }
 
+/* ================== تب گزارش‌های تخلف ================== */
+function ReportsTab({ onCountChange }) {
+  const toast = useToast();
+  const [data, setData] = useState(null);
+  const [status, setStatus] = useState('open');
+  const [page, setPage] = useState(1);
+  const [expanded, setExpanded] = useState(null);
+  const [rejecting, setRejecting] = useState(null); // adId
+  const [rejectReason, setRejectReason] = useState('');
+
+  const load = useCallback(() => {
+    api(`/admin/reports?status=${status}&page=${page}`).then(setData).catch(() => {});
+  }, [status, page]);
+  useEffect(load, [load]);
+
+  const resolve = async (adId, action, reason) => {
+    try {
+      await api(`/admin/reports/ad/${adId}/resolve`, { method: 'POST', body: { action, reason } });
+      toast.success(
+        action === 'dismiss' ? 'گزارش‌ها بی‌اساس علامت خوردند'
+        : action === 'hide' ? 'آگهی مخفی شد'
+        : action === 'reject' ? 'آگهی رد شد و دلیل ارسال شد'
+        : 'آگهی حذف شد'
+      );
+      setRejecting(null);
+      setRejectReason('');
+      load();
+      onCountChange?.();
+    } catch (err) {
+      toast.error(err.message);
+    }
+  };
+
+  const confirmDelete = async (adId) => {
+    const ok = await toast.confirm({
+      title: 'حذف کامل آگهی',
+      message: 'آگهی و همهٔ گفتگوهایش حذف و گزارش‌ها بسته می‌شوند.',
+      confirmText: 'حذف شود',
+      danger: true,
+    });
+    if (ok) resolve(adId, 'delete');
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        {[['open', 'باز'], ['resolved', 'رسیدگی‌شده'], ['dismissed', 'بی‌اساس'], ['all', 'همه']].map(([v, l]) => (
+          <button
+            key={v}
+            onClick={() => { setStatus(v); setPage(1); }}
+            className={`rounded-full px-4 py-2 text-xs font-bold transition ${
+              status === v ? 'bg-gray-900 text-white' : 'border border-gray-200 bg-white text-gray-500'
+            }`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {!data ? (
+        <p className="py-10 text-center text-gray-400">در حال بارگذاری...</p>
+      ) : data.groups.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-12 text-center">
+          <p className="mb-2 text-4xl">🛡️</p>
+          <p className="font-bold text-gray-700">گزارشی برای رسیدگی نیست</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {data.groups.map((g) => (
+            <div key={g.adId} className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+              <div className="flex items-center gap-3 p-3.5">
+                <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
+                  {g.ad?.images?.[0] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={imgUrl(g.ad.images[0])} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    <span className="flex h-full w-full items-center justify-center text-xl opacity-50">🗑️</span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="flex items-center gap-2 text-sm font-bold text-gray-800">
+                    <span className="line-clamp-1">{g.ad?.title || 'آگهی حذف‌شده'}</span>
+                    <span className="flex h-5 min-w-5 flex-shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                      {Number(g.count).toLocaleString('fa-IR')}
+                    </span>
+                  </p>
+                  <p className="mt-0.5 line-clamp-1 text-[11px] text-gray-400">
+                    {g.reasons.join(' · ')}
+                  </p>
+                  {g.ad && (
+                    <p className="text-[11px] text-gray-400" dir="ltr">
+                      {g.ad.owner?.phone} {g.ad.owner?.isBlocked && '🚫'} · {STATUS_FA[g.ad.status] || g.ad.status}
+                    </p>
+                  )}
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-1.5">
+                  {g.ad && (
+                    <Link href={`/ads/${g.adId}`} target="_blank" className="rounded-xl border border-gray-200 px-2.5 py-2 text-xs text-gray-600 hover:border-brand hover:text-brand">
+                      👁
+                    </Link>
+                  )}
+                  <button
+                    onClick={() => setExpanded(expanded === g.adId ? null : g.adId)}
+                    className="rounded-xl border border-gray-200 px-2.5 py-2 text-xs text-gray-600 transition hover:border-gray-300"
+                  >
+                    جزئیات {expanded === g.adId ? '▲' : '▼'}
+                  </button>
+                </div>
+              </div>
+
+              {/* جزئیات گزارش‌ها */}
+              {expanded === g.adId && (
+                <div className="border-t border-gray-50 bg-gray-50/50 px-4 py-3">
+                  <ul className="space-y-2">
+                    {g.reports.map((r) => (
+                      <li key={r._id} className="rounded-xl bg-white p-3 text-xs">
+                        <p className="font-bold text-gray-700">
+                          {r.reason}
+                          <span className="mr-2 font-normal text-gray-400">
+                            — {r.reporterName} (<span dir="ltr">{r.reporterPhone}</span>) · {timeAgo(r.createdAt)}
+                          </span>
+                        </p>
+                        {r.details && <p className="mt-1 leading-6 text-gray-500">{r.details}</p>}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* اقدامات */}
+              {status === 'open' && (
+                <div className="flex flex-wrap items-center gap-2 border-t border-gray-50 bg-gray-50/50 px-4 py-3">
+                  <button onClick={() => resolve(g.adId, 'dismiss')} className="rounded-xl bg-gray-200 px-3.5 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-300">
+                    بی‌اساس
+                  </button>
+                  {g.ad && (
+                    <>
+                      <button onClick={() => resolve(g.adId, 'hide')} className="rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-600 transition hover:bg-amber-100">
+                        مخفی کردن
+                      </button>
+                      <button onClick={() => { setRejecting(g.adId); setRejectReason(''); }} className="rounded-xl bg-orange-50 px-3.5 py-2 text-xs font-bold text-orange-600 transition hover:bg-orange-100">
+                        رد با دلیل
+                      </button>
+                    </>
+                  )}
+                  <span className="flex-1" />
+                  <button onClick={() => confirmDelete(g.adId)} className="rounded-xl bg-red-50 px-3.5 py-2 text-xs font-bold text-red-500 transition hover:bg-red-100">
+                    حذف آگهی
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {data?.pages > 1 && <Pager page={page} pages={data.pages} onPage={setPage} />}
+
+      {/* مودال رد با دلیل */}
+      {rejecting && (
+        <div className="fixed inset-0 z-[85] flex items-end justify-center p-4 sm:items-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={() => setRejecting(null)} />
+          <div className="dialog-in relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-extrabold text-gray-900">رد آگهی گزارش‌شده</h3>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+              maxLength={500}
+              autoFocus
+              placeholder="دلیل رد (برای صاحب آگهی نمایش داده می‌شود)..."
+              className="mt-4 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-7 outline-none transition focus:border-red-400 focus:bg-white"
+            />
+            <div className="mt-4 flex gap-2">
+              <button
+                onClick={() => rejectReason.trim() ? resolve(rejecting, 'reject', rejectReason.trim()) : toast.warning('دلیل را بنویسید')}
+                className="flex-1 rounded-2xl bg-red-500 py-3 text-sm font-extrabold text-white shadow-lg shadow-red-500/25 transition hover:bg-red-600"
+              >
+                رد آگهی
+              </button>
+              <button onClick={() => setRejecting(null)} className="rounded-2xl border border-gray-200 px-5 py-3 text-sm text-gray-500">
+                انصراف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Pager({ page, pages, onPage }) {
   return (
     <div className="flex items-center justify-center gap-2 text-sm">
@@ -455,6 +646,7 @@ function Pager({ page, pages, onPage }) {
 const TABS = [
   { id: 'dashboard', label: '📊 داشبورد' },
   { id: 'pending', label: '🟠 در انتظار تایید' },
+  { id: 'reports', label: '🛡️ گزارش‌ها' },
   { id: 'ads', label: '📋 آگهی‌ها' },
   { id: 'users', label: '👥 کاربران' },
   { id: 'reviews', label: '⭐ نظرات' },
@@ -466,8 +658,11 @@ export default function AdminPage() {
   const [tab, setTab] = useState('dashboard');
   const [pendingCount, setPendingCount] = useState(0);
 
+  const [reportCount, setReportCount] = useState(0);
+
   const refreshPending = useCallback(() => {
     api('/admin/ads?status=pending&limit=1').then((d) => setPendingCount(d.total)).catch(() => {});
+    api('/admin/reports/open-count').then((d) => setReportCount(d.total)).catch(() => {});
   }, []);
 
   // شمارنده در انتظار تایید (اولیه + هر ۳۰ ثانیه + فوری بعد از هر اقدام)
@@ -511,6 +706,11 @@ export default function AdminPage() {
             }`}
           >
             {t.label}
+            {t.id === 'reports' && reportCount > 0 && (
+              <span className={`mr-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${tab === t.id ? 'bg-white text-gray-900' : 'bg-red-500 text-white'}`}>
+                {Number(reportCount).toLocaleString('fa-IR')}
+              </span>
+            )}
             {t.id === 'pending' && pendingCount > 0 && (
               <span className={`mr-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${tab === t.id ? 'bg-white text-gray-900' : 'bg-brand text-white'}`}>
                 {Number(pendingCount).toLocaleString('fa-IR')}
@@ -522,6 +722,7 @@ export default function AdminPage() {
 
       {tab === 'dashboard' && <DashboardTab />}
       {tab === 'pending' && <AdsTab key="pending" initialStatus="pending" onPendingChange={refreshPending} />}
+      {tab === 'reports' && <ReportsTab onCountChange={refreshPending} />}
       {tab === 'ads' && <AdsTab key="all" onPendingChange={refreshPending} />}
       {tab === 'users' && <UsersTab />}
       {tab === 'reviews' && <ReviewsTab />}

@@ -5,6 +5,7 @@ import User from '../models/User.js';
 import Review from '../models/Review.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
+import Report from '../models/Report.js';
 import { requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
@@ -247,6 +248,136 @@ router.get('/reviews', async (req, res, next) => {
 router.delete('/reviews/:id', async (req, res, next) => {
   try {
     await Review.findByIdAndDelete(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ------------------------------------------------------------------ */
+/*  مدیریت گزارش‌های تخلف                                              */
+/* ------------------------------------------------------------------ */
+
+// لیست گزارش‌ها — گروه‌بندی per آگهی (تعداد گزارش + دلایل)
+router.get('/reports', async (req, res, next) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, parseInt(req.query.limit) || 20);
+    const status = req.query.status || 'open';
+
+    const match = status === 'all' ? {} : { status };
+
+    const grouped = await Report.aggregate([
+      { $match: match },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$ad',
+          count: { $sum: 1 },
+          reasons: { $addToSet: '$reason' },
+          lastAt: { $max: '$createdAt' },
+          reportIds: { $push: '$_id' },
+        },
+      },
+      { $sort: { count: -1, lastAt: -1 } },
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+    ]);
+
+    const total = (await Report.distinct('ad', match)).length;
+
+    // اطلاعات آگهی‌ها + جزئیات گزارش‌ها
+    const adIds = grouped.map((g) => g._id);
+    const [ads, details] = await Promise.all([
+      Ad.find({ _id: { $in: adIds } })
+        .select('title price isFree status city images owner')
+        .populate('owner', 'name phone isBlocked')
+        .lean(),
+      Report.find({ ad: { $in: adIds }, ...match })
+        .sort({ createdAt: -1 })
+        .populate('reporter', 'name phone')
+        .lean(),
+    ]);
+    const adMap = Object.fromEntries(ads.map((a) => [String(a._id), a]));
+    const detailMap = {};
+    for (const d of details) {
+      const k = String(d.ad);
+      if (!detailMap[k]) detailMap[k] = [];
+      detailMap[k].push({
+        _id: d._id,
+        reason: d.reason,
+        details: d.details,
+        createdAt: d.createdAt,
+        reporterName: d.reporter?.name || 'ناشناس',
+        reporterPhone: d.reporter?.phone || '',
+      });
+    }
+
+    res.json({
+      groups: grouped.map((g) => ({
+        ad: adMap[String(g._id)] || null,
+        adId: String(g._id),
+        count: g.count,
+        reasons: g.reasons,
+        lastAt: g.lastAt,
+        reports: detailMap[String(g._id)] || [],
+      })),
+      total,
+      pages: Math.ceil(total / limit),
+      page,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// تعداد گزارش‌های باز (برای باج تب)
+router.get('/reports/open-count', async (_req, res, next) => {
+  try {
+    const ads = await Report.distinct('ad', { status: 'open' });
+    res.json({ total: ads.length });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// رسیدگی به همه گزارش‌های یک آگهی
+//  action: 'dismiss' (بی‌اساس) | 'hide' (مخفی کردن آگهی) | 'reject' (رد با دلیل) | 'delete' (حذف کامل)
+router.post('/reports/ad/:adId/resolve', async (req, res, next) => {
+  try {
+    const { action, reason } = req.body;
+    const adId = req.params.adId;
+    if (!['dismiss', 'hide', 'reject', 'delete'].includes(action))
+      return res.status(400).json({ message: 'اقدام نامعتبر' });
+
+    const ad = await Ad.findById(adId);
+    if (!ad && action !== 'dismiss')
+      return res.status(404).json({ message: 'آگهی یافت نشد' });
+
+    if (action === 'hide') {
+      ad.status = 'hidden';
+      await ad.save();
+    } else if (action === 'reject') {
+      const r = (reason || '').trim().slice(0, 500);
+      if (!r) return res.status(400).json({ message: 'دلیل رد الزامی است' });
+      ad.status = 'rejected';
+      ad.rejectReason = r;
+      await ad.save();
+    } else if (action === 'delete') {
+      await Ad.findByIdAndDelete(adId);
+      const convs = await Conversation.find({ ad: adId }).select('_id');
+      await Promise.all([
+        Message.deleteMany({ conversation: { $in: convs.map((c) => c._id) } }),
+        Conversation.deleteMany({ ad: adId }),
+      ]);
+    }
+
+    const newStatus = action === 'dismiss' ? 'dismissed' : 'resolved';
+    await Report.updateMany(
+      { ad: adId, status: 'open' },
+      { status: newStatus, resolvedBy: req.user._id, resolvedAt: new Date() }
+    );
+
     res.json({ ok: true });
   } catch (err) {
     next(err);
