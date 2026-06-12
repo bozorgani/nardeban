@@ -49,6 +49,19 @@ export default async function AdPage({ params }) {
 
   return (
     <div className="mx-auto max-w-5xl">
+      {/* بنر وضعیت بررسی (فقط مالک/ادمین این صفحه را در این وضعیت می‌بینند) */}
+      {ad.status === 'pending' && (
+        <div className="mb-4 flex items-center gap-2 rounded-2xl bg-orange-50 px-4 py-3 text-sm text-orange-700">
+          ⏳ این آگهی در انتظار تایید مدیر است و هنوز برای دیگران نمایش داده نمی‌شود.
+        </div>
+      )}
+      {ad.status === 'rejected' && (
+        <div className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm leading-7 text-red-700">
+          🚫 <b>این آگهی رد شده است.</b> دلیل: {ad.rejectReason || 'نامشخص'}
+          <Link href={`/my-ads/edit/${ad._id}`} className="mr-2 font-bold underline">اصلاح آگهی</Link>
+        </div>
+      )}
+
       {/* بردکرامب */}
       <nav className="mb-5 flex items-center gap-1.5 text-sm text-gray-400">
         <Link href="/" className="hover:text-brand">نردبان</Link>

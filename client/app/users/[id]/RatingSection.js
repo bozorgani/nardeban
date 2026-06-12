@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, timeAgo } from '../../../lib/api';
 import { useAuth } from '../../../lib/AuthContext';
+import { useToast } from '../../../components/Toast';
 
 function StarPicker({ value, onChange, disabled }) {
   const [hover, setHover] = useState(0);
@@ -38,6 +39,7 @@ function StarPicker({ value, onChange, disabled }) {
 export default function RatingSection({ sellerId }) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   const [myRating, setMyRating] = useState(0);
   const [myComment, setMyComment] = useState('');
@@ -105,7 +107,14 @@ export default function RatingSection({ sellerId }) {
   };
 
   const remove = async () => {
-    if (!confirm('امتیاز شما حذف شود؟')) return;
+    const ok = await toast.confirm({
+      title: 'حذف امتیاز',
+      message: 'امتیاز و نظر شما برای این فروشنده حذف می‌شود.',
+      confirmText: 'حذف شود',
+      danger: true,
+      icon: '⭐',
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await api(`/users/${sellerId}/reviews`, { method: 'DELETE' });

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import mongoose from 'mongoose';
 import Ad from '../models/Ad.js';
 import Category from '../models/Category.js';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
 
 const router = Router();
@@ -98,7 +98,7 @@ router.get('/mine', requireAuth, async (req, res, next) => {
 });
 
 // جزئیات آگهی
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', optionalAuth, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id))
       return res.status(400).json({ message: 'شناسه نامعتبر' });
@@ -113,6 +113,15 @@ router.get('/:id', async (req, res, next) => {
       .lean();
 
     if (!ad) return res.status(404).json({ message: 'آگهی یافت نشد' });
+
+    // آگهی در انتظار/ردشده فقط برای مالک و ادمین قابل مشاهده است
+    if (['pending', 'rejected'].includes(ad.status)) {
+      const isOwner = req.user && String(req.user._id) === String(ad.owner?._id || ad.owner);
+      const isAdmin = req.user?.role === 'admin';
+      if (!isOwner && !isAdmin)
+        return res.status(404).json({ message: 'آگهی یافت نشد' });
+    }
+
     res.json({ ad });
   } catch (err) {
     next(err);
@@ -171,10 +180,22 @@ router.patch('/:id', requireAuth, upload.array('images', 5), async (req, res, ne
 
     // فیلدهای متنی ساده
     const allowed = [
-      'title', 'description', 'status', 'city', 'neighborhood',
+      'title', 'description', 'city', 'neighborhood',
       'condition', 'itemType', 'model', 'features', 'contactPhone',
     ];
+    const wasUnderReview = ['pending', 'rejected'].includes(ad.status);
+    const contentChanged = allowed.some(
+      (k) => req.body[k] !== undefined && String(req.body[k]) !== String(ad[k] ?? '')
+    );
     for (const key of allowed) if (req.body[key] !== undefined) ad[key] = req.body[key];
+
+    // مالک فقط بین وضعیت‌های عادی جابجا می‌شود؛ تایید (active) فقط با ادمین
+    if (req.body.status !== undefined) {
+      const userAllowed = ['reserved', 'sold', 'hidden', 'active'];
+      if (userAllowed.includes(req.body.status) && !wasUnderReview) {
+        ad.status = req.body.status;
+      }
+    }
 
     // قیمت / رایگان
     if (req.body.isFree !== undefined) ad.isFree = String(req.body.isFree) === 'true';
@@ -208,6 +229,12 @@ router.patch('/:id', requireAuth, upload.array('images', 5), async (req, res, ne
       ad.images = [...keep, ...added].slice(0, 5);
     } else if (added.length) {
       ad.images = [...ad.images, ...added].slice(0, 5);
+    }
+
+    // اگر آگهیِ ردشده/در انتظار ویرایش محتوایی شد → دوباره به صف بررسی برود
+    if (wasUnderReview && (contentChanged || added.length || req.body.keepImages !== undefined)) {
+      ad.status = 'pending';
+      ad.rejectReason = '';
     }
 
     await ad.save();

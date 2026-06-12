@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { api, API_URL, getToken, digitsOnly } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
+import { useToast } from '../../components/Toast';
 
 const MapPicker = dynamic(() => import('../../components/MapPicker'), {
   ssr: false,
@@ -27,6 +28,7 @@ const CONDITIONS = ['نو', 'در حد نو', 'کارکرده', 'نیاز به �
 
 export default function NewAdWizard() {
   const router = useRouter();
+  const toast = useToast();
   const { user, loading } = useAuth();
   const [step, setStep] = useState(1);
   const [tree, setTree] = useState([]);
@@ -159,7 +161,8 @@ export default function NewAdWizard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'خطا در ثبت آگهی');
-      router.push(`/ads/${data.ad._id}`);
+      toast.success('آگهی شما ثبت شد و پس از تایید مدیر منتشر می‌شود', { title: '⏳ در انتظار بررسی', duration: 6000 });
+      router.push('/my-ads');
     } catch (err) {
       setError(err.message);
       setBusy(false);

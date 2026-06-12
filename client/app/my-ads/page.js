@@ -5,19 +5,23 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, formatPrice, timeAgo, imgUrl } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
+import { useToast } from '../../components/Toast';
 import AdChats from './AdChats';
 
 const STATUS = {
+  pending: { label: 'در انتظار تایید', dot: 'bg-orange-400', chip: 'bg-orange-50 text-orange-600' },
   active: { label: 'فعال', dot: 'bg-green-500', chip: 'bg-green-50 text-green-700' },
   reserved: { label: 'رزرو شده', dot: 'bg-amber-400', chip: 'bg-amber-50 text-amber-700' },
   sold: { label: 'فروخته شد', dot: 'bg-blue-500', chip: 'bg-blue-50 text-blue-700' },
   hidden: { label: 'مخفی', dot: 'bg-gray-300', chip: 'bg-gray-100 text-gray-500' },
+  rejected: { label: 'رد شده', dot: 'bg-red-500', chip: 'bg-red-50 text-red-600' },
 };
 
 const TABS = [
   { id: 'all', label: 'همه' },
+  { id: 'pending', label: 'در انتظار' },
   { id: 'active', label: 'فعال' },
-  { id: 'reserved', label: 'رزرو' },
+  { id: 'rejected', label: 'رد شده' },
   { id: 'sold', label: 'فروخته' },
   { id: 'hidden', label: 'مخفی' },
 ];
@@ -25,6 +29,7 @@ const TABS = [
 export default function MyAdsPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [ads, setAds] = useState(null);
   const [chatMap, setChatMap] = useState({});
   const [tab, setTab] = useState('all');
@@ -49,14 +54,30 @@ export default function MyAdsPage() {
   }, [loading, user, router]);
 
   const setStatus = async (id, status) => {
-    await api(`/ads/${id}`, { method: 'PATCH', body: { status } });
-    setAds((prev) => prev.map((a) => (a._id === id ? { ...a, status } : a)));
+    try {
+      await api(`/ads/${id}`, { method: 'PATCH', body: { status } });
+      setAds((prev) => prev.map((a) => (a._id === id ? { ...a, status } : a)));
+      toast.success('وضعیت آگهی به‌روزرسانی شد');
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
   const remove = async (id) => {
-    if (!confirm('این آگهی برای همیشه حذف شود؟')) return;
-    await api(`/ads/${id}`, { method: 'DELETE' });
-    setAds((prev) => prev.filter((a) => a._id !== id));
+    const ok = await toast.confirm({
+      title: 'حذف آگهی',
+      message: 'این آگهی برای همیشه حذف می‌شود و قابل بازگشت نیست.',
+      confirmText: 'حذف شود',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api(`/ads/${id}`, { method: 'DELETE' });
+      setAds((prev) => prev.filter((a) => a._id !== id));
+      toast.success('آگهی حذف شد');
+    } catch (err) {
+      toast.error(err.message);
+    }
   };
 
   if (loading || !user || ads === null)
@@ -156,8 +177,32 @@ export default function MyAdsPage() {
                   </div>
                 </div>
 
+                {/* پیام وضعیت بررسی */}
+                {ad.status === 'pending' && (
+                  <div className="mx-4 mb-1 flex items-center gap-2 rounded-2xl bg-orange-50 px-4 py-3 text-xs leading-6 text-orange-700">
+                    <span className="text-base">⏳</span>
+                    آگهی شما در صف بررسی است و پس از تایید مدیر منتشر می‌شود.
+                  </div>
+                )}
+                {ad.status === 'rejected' && (
+                  <div className="mx-4 mb-1 rounded-2xl bg-red-50 px-4 py-3 text-xs leading-6 text-red-700">
+                    <p className="flex items-center gap-2 font-bold">
+                      <span className="text-base">🚫</span> آگهی رد شد — دلیل:
+                    </p>
+                    <p className="mt-1 pr-6">{ad.rejectReason || 'نامشخص'}</p>
+                    <p className="mt-1.5 pr-6 text-[11px] text-red-400">
+                      پس از ویرایش و اصلاح، آگهی دوباره برای بررسی ارسال می‌شود.
+                    </p>
+                  </div>
+                )}
+
                 {/* اکشن‌ها */}
                 <div className="flex items-center gap-2 border-t border-gray-50 bg-gray-50/50 px-4 py-3">
+                  {['pending', 'rejected'].includes(ad.status) ? (
+                    <span className="text-[11px] text-gray-400">
+                      {ad.status === 'pending' ? 'در حال بررسی توسط مدیر...' : 'برای انتشار مجدد، ویرایش کنید'}
+                    </span>
+                  ) : (
                   <select
                     value={ad.status}
                     onChange={(e) => setStatus(ad._id, e.target.value)}
@@ -168,6 +213,7 @@ export default function MyAdsPage() {
                     <option value="sold">🔵 فروخته شد</option>
                     <option value="hidden">⚪ مخفی</option>
                   </select>
+                  )}
                   <Link
                     href={`/my-ads/edit/${ad._id}`}
                     className="rounded-xl bg-gray-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-gray-700"

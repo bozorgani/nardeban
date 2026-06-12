@@ -32,6 +32,7 @@ await Ad.insertMany(
     neighborhood: a.neighborhood,
     location: { lat: a.lat || null, lng: a.lng || null },
     images: [],
+    status: 'active',
     owner: demoUser._id,
     contactPhone: demoUser.phone,
   }))
@@ -52,6 +53,7 @@ if (bulk > 0) {
     city: cities[i % cities.length],
     neighborhood: '',
     images: [],
+    status: 'active',
     owner: demoUser._id,
     contactPhone: demoUser.phone,
     createdAt: new Date(Date.now() - i * 60000), // ترتیب زمانی واقعی

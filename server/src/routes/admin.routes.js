@@ -19,14 +19,14 @@ router.get('/stats', async (_req, res, next) => {
     since.setHours(0, 0, 0, 0);
 
     const [
-      totalAds, activeAds, soldAds, hiddenAds,
+      totalAds, activeAds, soldAds, pendingAds,
       totalUsers, blockedUsers, totalReviews, totalConvs, totalMsgs,
       adsByDay, usersByDay, topCities,
     ] = await Promise.all([
       Ad.countDocuments(),
       Ad.countDocuments({ status: 'active' }),
       Ad.countDocuments({ status: 'sold' }),
-      Ad.countDocuments({ status: 'hidden' }),
+      Ad.countDocuments({ status: 'pending' }),
       User.countDocuments(),
       User.countDocuments({ isBlocked: true }),
       Review.countDocuments(),
@@ -52,7 +52,7 @@ router.get('/stats', async (_req, res, next) => {
 
     res.json({
       counts: {
-        totalAds, activeAds, soldAds, hiddenAds,
+        totalAds, activeAds, soldAds, pendingAds,
         totalUsers, blockedUsers, totalReviews, totalConvs, totalMsgs,
       },
       adsByDay, usersByDay, topCities,
@@ -98,11 +98,45 @@ router.get('/ads', async (req, res, next) => {
 router.patch('/ads/:id', async (req, res, next) => {
   try {
     const { status } = req.body;
-    if (!['active', 'reserved', 'sold', 'hidden'].includes(status))
+    if (!['pending', 'active', 'reserved', 'sold', 'hidden', 'rejected'].includes(status))
       return res.status(400).json({ message: 'وضعیت نامعتبر' });
-    const ad = await Ad.findByIdAndUpdate(req.params.id, { status }, { new: true });
+    const update = { status };
+    if (status === 'active') update.rejectReason = ''; // تایید → پاک شدن دلیل رد
+    const ad = await Ad.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!ad) return res.status(404).json({ message: 'آگهی یافت نشد' });
     res.json({ ad });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ✅ تایید آگهی در انتظار
+router.post('/ads/:id/approve', async (req, res, next) => {
+  try {
+    const ad = await Ad.findByIdAndUpdate(
+      req.params.id,
+      { status: 'active', rejectReason: '' },
+      { new: true }
+    );
+    if (!ad) return res.status(404).json({ message: 'آگهی یافت نشد' });
+    res.json({ ok: true, ad });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ❌ رد آگهی با دلیل (برای کاربر نمایش داده می‌شود)
+router.post('/ads/:id/reject', async (req, res, next) => {
+  try {
+    const reason = (req.body.reason || '').trim().slice(0, 500);
+    if (!reason) return res.status(400).json({ message: 'دلیل رد الزامی است' });
+    const ad = await Ad.findByIdAndUpdate(
+      req.params.id,
+      { status: 'rejected', rejectReason: reason },
+      { new: true }
+    );
+    if (!ad) return res.status(404).json({ message: 'آگهی یافت نشد' });
+    res.json({ ok: true, ad });
   } catch (err) {
     next(err);
   }

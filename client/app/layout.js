@@ -1,5 +1,6 @@
 import './globals.css';
 import { AuthProvider } from '../lib/AuthContext';
+import { ToastProvider } from '../components/Toast';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import PWA from '../components/PWA';
@@ -37,11 +38,13 @@ export default function RootLayout({ children }) {
           href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css"
         />
         <AuthProvider>
-          <Header />
-          {/* پدینگ پایین در موبایل برای ناوبری ثابت */}
-          <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:pb-8">{children}</main>
-          <BottomNav />
-          <PWA />
+          <ToastProvider>
+            <Header />
+            {/* پدینگ پایین در موبایل برای ناوبری ثابت */}
+            <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:pb-8">{children}</main>
+            <BottomNav />
+            <PWA />
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

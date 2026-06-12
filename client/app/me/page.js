@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/AuthContext';
 import { usePush } from '../../lib/usePush';
 import { api, CITIES } from '../../lib/api';
+import { useToast } from '../../components/Toast';
 
 /* ---------- آیکون‌های SVG ---------- */
 const Icon = {
@@ -46,11 +47,13 @@ function MenuItem({ href, icon, title, desc, badge, color = 'text-gray-600 bg-gr
 /* ---------- سوییچ نوتیفیکیشن ---------- */
 function PushToggle({ user }) {
   const { supported, permission, subscribed, loading, enable, disable } = usePush(user);
+  const toast = useToast();
   if (!supported) return null;
 
   const toggle = async () => {
     const res = subscribed ? await disable() : await enable();
-    if (res?.error) alert(res.error);
+    if (res?.error) toast.error(res.error);
+    else toast.success(subscribed ? 'نوتیفیکیشن غیرفعال شد' : 'نوتیفیکیشن فعال شد 🔔');
   };
 
   return (
@@ -77,6 +80,7 @@ function PushToggle({ user }) {
 
 /* ---------- ویرایش پروفایل (شیت پایین) ---------- */
 function EditProfileSheet({ user, open, onClose, onSaved }) {
+  const toast = useToast();
   const [name, setName] = useState(user?.name || '');
   const [city, setCity] = useState(user?.city || '');
   const [busy, setBusy] = useState(false);
@@ -96,8 +100,9 @@ function EditProfileSheet({ user, open, onClose, onSaved }) {
       await api('/users/me', { method: 'PATCH', body: { name: name.trim(), city } });
       await onSaved();
       onClose();
+      toast.success('پروفایل به‌روزرسانی شد');
     } catch (err) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setBusy(false);
     }

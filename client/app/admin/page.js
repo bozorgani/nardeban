@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api, formatPrice, timeAgo, imgUrl } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
+import { useToast } from '../../components/Toast';
 
 /* ================== اجزای کوچک ================== */
 
@@ -53,7 +54,7 @@ function BarChart({ data, title, color = '#a62626' }) {
   );
 }
 
-const STATUS_FA = { active: '🟢 فعال', reserved: '🟡 رزرو', sold: '🔵 فروخته', hidden: '⚪ مخفی' };
+const STATUS_FA = { pending: '🟠 در انتظار', active: '🟢 فعال', reserved: '🟡 رزرو', sold: '🔵 فروخته', hidden: '⚪ مخفی', rejected: '🔴 رد شده' };
 
 /* ================== تب داشبورد ================== */
 function DashboardTab() {
@@ -69,7 +70,7 @@ function DashboardTab() {
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="کل آگهی‌ها" value={counts.totalAds} sub={`${Number(counts.activeAds).toLocaleString('fa-IR')} فعال`} color="from-brand to-brand-dark" icon="📋" />
+        <StatCard label="کل آگهی‌ها" value={counts.totalAds} sub={`${Number(counts.activeAds).toLocaleString('fa-IR')} فعال · ${Number(counts.pendingAds || 0).toLocaleString('fa-IR')} در انتظار`} color="from-brand to-brand-dark" icon="📋" />
         <StatCard label="کاربران" value={counts.totalUsers} sub={`${Number(counts.blockedUsers).toLocaleString('fa-IR')} مسدود`} color="from-blue-500 to-blue-700" icon="👥" />
         <StatCard label="گفتگوها" value={counts.totalConvs} sub={`${Number(counts.totalMsgs).toLocaleString('fa-IR')} پیام`} color="from-emerald-500 to-emerald-700" icon="💬" />
         <StatCard label="نظرات" value={counts.totalReviews} sub={`${Number(counts.soldAds).toLocaleString('fa-IR')} فروش موفق`} color="from-amber-500 to-orange-600" icon="⭐" />
@@ -99,10 +100,11 @@ function DashboardTab() {
 }
 
 /* ================== تب آگهی‌ها ================== */
-function AdsTab() {
+function AdsTab({ initialStatus = '' }) {
+  const toast = useToast();
   const [data, setData] = useState(null);
   const [q, setQ] = useState('');
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(initialStatus);
   const [page, setPage] = useState(1);
 
   const load = useCallback(() => {
@@ -118,13 +120,44 @@ function AdsTab() {
   }, [load]);
 
   const setAdStatus = async (id, s) => {
-    await api(`/admin/ads/${id}`, { method: 'PATCH', body: { status: s } });
-    load();
+    try {
+      await api(`/admin/ads/${id}`, { method: 'PATCH', body: { status: s } });
+      toast.success('وضعیت تغییر کرد');
+      load();
+    } catch (err) { toast.error(err.message); }
+  };
+  const approveAd = async (id) => {
+    try {
+      await api(`/admin/ads/${id}/approve`, { method: 'POST' });
+      toast.success('آگهی تایید و منتشر شد ✅');
+      load();
+    } catch (err) { toast.error(err.message); }
+  };
+  const [rejecting, setRejecting] = useState(null); // {id, title}
+  const [rejectReason, setRejectReason] = useState('');
+  const doReject = async () => {
+    if (!rejectReason.trim()) return toast.warning('دلیل رد را بنویسید');
+    try {
+      await api(`/admin/ads/${rejecting.id}/reject`, { method: 'POST', body: { reason: rejectReason.trim() } });
+      toast.success('آگهی رد شد و دلیل برای کاربر ارسال شد');
+      setRejecting(null);
+      setRejectReason('');
+      load();
+    } catch (err) { toast.error(err.message); }
   };
   const removeAd = async (id) => {
-    if (!confirm('آگهی + همهٔ گفتگوهایش حذف شود؟')) return;
-    await api(`/admin/ads/${id}`, { method: 'DELETE' });
-    load();
+    const ok = await toast.confirm({
+      title: 'حذف کامل آگهی',
+      message: 'آگهی به همراه همهٔ گفتگوها و پیام‌هایش حذف می‌شود.',
+      confirmText: 'حذف شود',
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await api(`/admin/ads/${id}`, { method: 'DELETE' });
+      toast.success('آگهی حذف شد');
+      load();
+    } catch (err) { toast.error(err.message); }
   };
 
   return (
@@ -142,10 +175,12 @@ function AdsTab() {
           className="rounded-2xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-brand"
         >
           <option value="">همه وضعیت‌ها</option>
-          <option value="active">فعال</option>
-          <option value="reserved">رزرو</option>
-          <option value="sold">فروخته</option>
-          <option value="hidden">مخفی</option>
+          <option value="pending">🟠 در انتظار تایید</option>
+          <option value="active">🟢 فعال</option>
+          <option value="reserved">🟡 رزرو</option>
+          <option value="sold">🔵 فروخته</option>
+          <option value="hidden">⚪ مخفی</option>
+          <option value="rejected">🔴 رد شده</option>
         </select>
       </div>
 
@@ -176,15 +211,26 @@ function AdsTab() {
                     {ad.owner?.phone} {ad.owner?.isBlocked && '🚫'}
                   </p>
                 </div>
-                <select
-                  value={ad.status}
-                  onChange={(e) => setAdStatus(ad._id, e.target.value)}
-                  className="rounded-xl border border-gray-200 bg-white px-2 py-1.5 text-xs outline-none"
-                >
-                  {Object.entries(STATUS_FA).map(([k, v]) => (
-                    <option key={k} value={k}>{v}</option>
-                  ))}
-                </select>
+                {ad.status === 'pending' ? (
+                  <div className="flex flex-shrink-0 flex-col gap-1.5 sm:flex-row">
+                    <button onClick={() => approveAd(ad._id)} className="rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-emerald-600">
+                      ✓ تایید
+                    </button>
+                    <button onClick={() => { setRejecting({ id: ad._id, title: ad.title }); setRejectReason(''); }} className="rounded-xl bg-red-50 px-3.5 py-2 text-xs font-bold text-red-500 transition hover:bg-red-100">
+                      ✕ رد
+                    </button>
+                  </div>
+                ) : (
+                  <select
+                    value={ad.status}
+                    onChange={(e) => setAdStatus(ad._id, e.target.value)}
+                    className="rounded-xl border border-gray-200 bg-white px-2 py-1.5 text-xs outline-none"
+                  >
+                    {Object.entries(STATUS_FA).map(([k, v]) => (
+                      <option key={k} value={k}>{v}</option>
+                    ))}
+                  </select>
+                )}
                 <button onClick={() => removeAd(ad._id)} className="rounded-xl px-2.5 py-1.5 text-xs text-red-400 transition hover:bg-red-50 hover:text-red-600">
                   حذف
                 </button>
@@ -196,12 +242,41 @@ function AdsTab() {
           )}
         </>
       )}
+
+      {/* مودال دلیل رد */}
+      {rejecting && (
+        <div className="fixed inset-0 z-[85] flex items-end justify-center p-4 sm:items-center">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={() => setRejecting(null)} />
+          <div className="dialog-in relative w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
+            <h3 className="text-lg font-extrabold text-gray-900">رد آگهی</h3>
+            <p className="mt-1 line-clamp-1 text-sm text-gray-400">{rejecting.title}</p>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              rows={3}
+              maxLength={500}
+              autoFocus
+              placeholder="دلیل رد را بنویسید... (برای کاربر نمایش داده می‌شود — مثلاً: عکس نامناسب، قیمت غیرواقعی، اطلاعات ناقص)"
+              className="mt-4 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-7 outline-none transition focus:border-red-400 focus:bg-white"
+            />
+            <div className="mt-4 flex gap-2">
+              <button onClick={doReject} className="flex-1 rounded-2xl bg-red-500 py-3 text-sm font-extrabold text-white shadow-lg shadow-red-500/25 transition hover:bg-red-600">
+                رد آگهی و ارسال دلیل
+              </button>
+              <button onClick={() => setRejecting(null)} className="rounded-2xl border border-gray-200 px-5 py-3 text-sm text-gray-500">
+                انصراف
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 /* ================== تب کاربران ================== */
 function UsersTab() {
+  const toast = useToast();
   const [data, setData] = useState(null);
   const [q, setQ] = useState('');
   const [onlyBlocked, setOnlyBlocked] = useState(false);
@@ -220,9 +295,21 @@ function UsersTab() {
   }, [load]);
 
   const toggleBlock = async (u) => {
-    if (!confirm(u.isBlocked ? `«${u.name || u.phone}» رفع مسدودی شود؟` : `«${u.name || u.phone}» مسدود شود؟ همهٔ آگهی‌هایش مخفی می‌شوند.`)) return;
-    await api(`/admin/users/${u._id}/block`, { method: 'PATCH' });
-    load();
+    const ok = await toast.confirm({
+      title: u.isBlocked ? 'رفع مسدودی کاربر' : 'مسدودسازی کاربر',
+      message: u.isBlocked
+        ? `«${u.name || u.phone}» دوباره به حساب خود دسترسی پیدا می‌کند.`
+        : `«${u.name || u.phone}» مسدود و همهٔ آگهی‌هایش مخفی می‌شوند.`,
+      confirmText: u.isBlocked ? 'رفع مسدودی' : 'مسدود شود',
+      danger: !u.isBlocked,
+      icon: u.isBlocked ? '🔓' : '🚫',
+    });
+    if (!ok) return;
+    try {
+      await api(`/admin/users/${u._id}/block`, { method: 'PATCH' });
+      toast.success(u.isBlocked ? 'کاربر رفع مسدودی شد' : 'کاربر مسدود شد');
+      load();
+    } catch (err) { toast.error(err.message); }
   };
 
   return (
@@ -285,6 +372,7 @@ function UsersTab() {
 
 /* ================== تب نظرات ================== */
 function ReviewsTab() {
+  const toast = useToast();
   const [data, setData] = useState(null);
   const [page, setPage] = useState(1);
 
@@ -294,9 +382,13 @@ function ReviewsTab() {
   useEffect(load, [load]);
 
   const remove = async (id) => {
-    if (!confirm('این نظر حذف شود؟')) return;
-    await api(`/admin/reviews/${id}`, { method: 'DELETE' });
-    load();
+    const ok = await toast.confirm({ title: 'حذف نظر', message: 'این نظر برای همیشه حذف می‌شود.', confirmText: 'حذف شود', danger: true });
+    if (!ok) return;
+    try {
+      await api(`/admin/reviews/${id}`, { method: 'DELETE' });
+      toast.success('نظر حذف شد');
+      load();
+    } catch (err) { toast.error(err.message); }
   };
 
   if (!data) return <p className="py-10 text-center text-gray-400">در حال بارگذاری...</p>;
@@ -349,6 +441,7 @@ function Pager({ page, pages, onPage }) {
 /* ================== صفحه اصلی پنل ================== */
 const TABS = [
   { id: 'dashboard', label: '📊 داشبورد' },
+  { id: 'pending', label: '🟠 در انتظار تایید' },
   { id: 'ads', label: '📋 آگهی‌ها' },
   { id: 'users', label: '👥 کاربران' },
   { id: 'reviews', label: '⭐ نظرات' },
@@ -358,6 +451,17 @@ export default function AdminPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [tab, setTab] = useState('dashboard');
+  const [pendingCount, setPendingCount] = useState(0);
+
+  // شمارنده در انتظار تایید (هر ۳۰ ثانیه)
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+    const load = () =>
+      api('/admin/ads?status=pending&limit=1').then((d) => setPendingCount(d.total)).catch(() => {});
+    load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
+  }, [user]);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'admin')) router.replace('/');
@@ -368,10 +472,16 @@ export default function AdminPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="mb-5 flex items-center justify-between">
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-extrabold text-gray-900">👑 پنل مدیریت نردبان</h1>
           <p className="mt-0.5 text-sm text-gray-400">خوش آمدید، {user.name}</p>
+        </div>
+        {/* دسترسی سریع شخصی */}
+        <div className="flex gap-2 text-xs">
+          <Link href="/new" className="rounded-xl bg-brand px-3.5 py-2 font-bold text-white transition hover:bg-brand-dark">+ ثبت آگهی</Link>
+          <Link href="/my-ads" className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-gray-600 transition hover:border-gray-300">آگهی‌های من</Link>
+          <Link href="/favorites" className="rounded-xl border border-gray-200 bg-white px-3.5 py-2 text-gray-600 transition hover:border-gray-300">❤️ نشان‌ها</Link>
         </div>
       </div>
 
@@ -381,17 +491,23 @@ export default function AdminPage() {
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex-shrink-0 rounded-2xl px-5 py-2.5 text-sm font-bold transition ${
+            className={`relative flex-shrink-0 rounded-2xl px-5 py-2.5 text-sm font-bold transition ${
               tab === t.id ? 'bg-gray-900 text-white shadow-md' : 'border border-gray-200 bg-white text-gray-500 hover:border-gray-300'
             }`}
           >
             {t.label}
+            {t.id === 'pending' && pendingCount > 0 && (
+              <span className="absolute -left-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-[10px] font-bold text-white shadow">
+                {Number(pendingCount).toLocaleString('fa-IR')}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {tab === 'dashboard' && <DashboardTab />}
-      {tab === 'ads' && <AdsTab />}
+      {tab === 'pending' && <AdsTab key="pending" initialStatus="pending" />}
+      {tab === 'ads' && <AdsTab key="all" />}
       {tab === 'users' && <UsersTab />}
       {tab === 'reviews' && <ReviewsTab />}
     </div>

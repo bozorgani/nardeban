@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import AdCard from '../../components/AdCard';
+import { useToast } from '../../components/Toast';
 
 export default function FavoritesPage() {
   const { user, loading, refresh } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [favs, setFavs] = useState(null);
 
   useEffect(() => {
@@ -18,10 +20,18 @@ export default function FavoritesPage() {
   }, [loading, user, router]);
 
   const removeAll = async () => {
-    if (!confirm('همهٔ نشان‌ها حذف شوند؟')) return;
+    const ok = await toast.confirm({
+      title: 'حذف همهٔ نشان‌ها',
+      message: 'تمام آگهی‌های ذخیره‌شده از فهرست نشان‌ها حذف می‌شوند.',
+      confirmText: 'حذف همه',
+      danger: true,
+      icon: '💔',
+    });
+    if (!ok) return;
     await Promise.allSettled(favs.map((f) => api(`/users/favorites/${f._id}`, { method: 'POST' })));
     setFavs([]);
     refresh();
+    toast.success('همهٔ نشان‌ها حذف شدند');
   };
 
   if (loading || !user || favs === null)

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { api, imgUrl, timeAgo } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import { useSocket } from '../../lib/useSocket';
+import { useToast } from '../../components/Toast';
 
 /* ------------------------------------------------------------------ */
 /*  لیست گفتگوها (ستون راست)                                          */
@@ -119,6 +120,7 @@ function ConversationList({ conversations, activeId, onPick, onlineMap }) {
 /*  پنجره گفتگو (ستون چپ) — کاملاً Real-time                           */
 /* ------------------------------------------------------------------ */
 function ChatWindow({ conversationId, meId, onBack, onActivity }) {
+  const toast = useToast();
   const [conv, setConv] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
@@ -290,7 +292,7 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
       }
     } catch (err) {
       setText(body);
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSending(false);
     }

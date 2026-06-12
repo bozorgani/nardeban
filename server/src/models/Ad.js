@@ -24,7 +24,12 @@ const adSchema = new mongoose.Schema(
     contactPhone: { type: String, required: true },
     chatEnabled: { type: Boolean, default: true },
     callEnabled: { type: Boolean, default: true },
-    status: { type: String, enum: ['active', 'reserved', 'sold', 'hidden'], default: 'active' },
+    status: {
+      type: String,
+      enum: ['pending', 'active', 'reserved', 'sold', 'hidden', 'rejected'],
+      default: 'pending', // هر آگهی جدید ابتدا در انتظار تایید مدیر
+    },
+    rejectReason: { type: String, default: '' },
     views: { type: Number, default: 0 },
   },
   { timestamps: true }

@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { api } from '../../../lib/api';
 import { useAuth } from '../../../lib/AuthContext';
 import NamePrompt from '../../../components/NamePrompt';
+import { useToast } from '../../../components/Toast';
 
 export default function ContactBox({ adId, ownerId, phone, callEnabled = true, chatEnabled = true }) {
   const { user } = useAuth();
   const router = useRouter();
+  const toast = useToast();
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [askName, setAskName] = useState(false);
@@ -31,7 +33,7 @@ export default function ContactBox({ adId, ownerId, phone, callEnabled = true, c
       router.push(`/chat?c=${d.conversationId}`);
     } catch (err) {
       if (err.message === 'NAME_REQUIRED') setAskName(true);
-      else alert(err.message);
+      else toast.error(err.message);
       setBusy(false);
     }
   };
