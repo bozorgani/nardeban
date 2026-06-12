@@ -83,15 +83,15 @@ function ConversationList({ conversations, activeId, onPick, onlineMap }) {
               </div>
 
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-bold text-gray-800">
+                <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 truncate text-sm font-bold text-gray-800" title={c.other?.name || 'کاربر نردبان'}>
                     {c.other?.name || 'کاربر نردبان'}
-                    <span className={`mr-1.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                      c.role === 'seller' ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600'
-                    }`}>
-                      {c.role === 'seller' ? 'خریدار' : 'فروشنده'}
-                    </span>
-                  </p>
+                  </span>
+                  <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                    c.role === 'seller' ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600'
+                  }`}>
+                    {c.role === 'seller' ? 'خریدار' : 'فروشنده'}
+                  </span>
                   <span className="flex-shrink-0 text-[10px] text-gray-400">
                     {timeAgo(c.lastMessageAt)}
                   </span>
@@ -521,9 +521,9 @@ function ChatPageInner() {
     return <p className="py-16 text-center text-gray-400">در حال بارگذاری چت...</p>;
 
   return (
-    <div className="mx-auto max-w-6xl">
-      <h1 className="mb-4 text-xl font-extrabold text-gray-900">💬 چت نردبان</h1>
-      <div className="grid h-[calc(100vh-220px)] min-h-[480px] grid-cols-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:grid-cols-[340px_1fr]">
+    <div className="mx-auto max-w-7xl">
+      {/* ارتفاع تقریباً تمام‌صفحه: هدر ~64px + پدینگ. در موبایل جای BottomNav هم حساب شده */}
+      <div className="grid h-[calc(100dvh-160px)] min-h-[520px] grid-cols-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:h-[calc(100dvh-128px)] md:grid-cols-[360px_1fr]">
         <div className={`overflow-y-auto border-l border-gray-100 ${activeId ? 'hidden md:block' : ''}`}>
           <ConversationList
             conversations={conversations}

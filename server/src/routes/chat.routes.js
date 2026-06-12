@@ -61,6 +61,10 @@ router.get('/unread-count', async (req, res, next) => {
 // شروع گفتگو (یا گرفتن گفتگوی موجود) برای یک آگهی — فقط خریدار
 router.post('/conversations', async (req, res, next) => {
   try {
+    // برای چت داشتن نام الزامی است (طرف مقابل باید بداند با چه کسی گفتگو می‌کند)
+    if (!req.user.name || !req.user.name.trim())
+      return res.status(400).json({ message: 'NAME_REQUIRED', code: 'NAME_REQUIRED' });
+
     const { adId } = req.body;
     if (!mongoose.isValidObjectId(adId))
       return res.status(400).json({ message: 'شناسه آگهی نامعتبر' });

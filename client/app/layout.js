@@ -39,10 +39,7 @@ export default function RootLayout({ children }) {
         <AuthProvider>
           <Header />
           {/* پدینگ پایین در موبایل برای ناوبری ثابت */}
-          <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:pb-6">{children}</main>
-          <footer className="mb-16 border-t bg-white py-6 text-center text-sm text-gray-500 md:mb-0 md:mt-12">
-            نردبان — پروژه نمونه آموزشی (کلون دیوار) ⚒️
-          </footer>
+          <main className="mx-auto max-w-7xl px-4 py-6 pb-24 md:pb-8">{children}</main>
           <BottomNav />
           <PWA />
         </AuthProvider>
