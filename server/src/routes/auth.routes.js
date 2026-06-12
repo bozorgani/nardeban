@@ -47,7 +47,7 @@ router.post('/verify-otp', async (req, res, next) => {
 
     res.json({
       token: sign(user),
-      user: { id: user._id, phone: user.phone, name: user.name, city: user.city },
+      user: { id: user._id, phone: user.phone, name: user.name, city: user.city, role: user.role },
     });
   } catch (err) {
     next(err);
@@ -56,8 +56,8 @@ router.post('/verify-otp', async (req, res, next) => {
 
 // اطلاعات کاربر جاری
 router.get('/me', requireAuth, (req, res) => {
-  const { _id, phone, name, city, favorites } = req.user;
-  res.json({ user: { id: _id, phone, name, city, favorites } });
+  const { _id, phone, name, city, favorites, role } = req.user;
+  res.json({ user: { id: _id, phone, name, city, favorites, role } });
 });
 
 export default router;

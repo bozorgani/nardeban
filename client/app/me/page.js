@@ -259,6 +259,9 @@ export default function MePage() {
 
       {/* منو */}
       <div className="divide-y divide-gray-50 overflow-hidden rounded-3xl border border-gray-200 bg-white">
+        {user.role === 'admin' && (
+          <MenuItem href="/admin" icon={<span className="text-lg">👑</span>} title="پنل مدیریت" desc="داشبورد، آگهی‌ها، کاربران و نظرات" color="bg-amber-50 text-amber-600" />
+        )}
         <MenuItem href="/my-ads" icon={Icon.ads} title="آگهی‌های من" desc="مدیریت، تغییر وضعیت و چت خریداران" color="bg-blue-50 text-blue-500" />
         <MenuItem href="/chat" icon={Icon.chat} title="چت و تماس" desc="گفتگو با خریداران و فروشندگان" badge={stats?.unread} color="bg-green-50 text-green-600" />
         <MenuItem href="/favorites" icon={Icon.heart} title="نشان‌شده‌ها" desc="آگهی‌هایی که ذخیره کرده‌اید" color="bg-rose-50 text-rose-500" />

@@ -14,6 +14,13 @@ async function run() {
   const slugMap = await seedCategories(Category);
   console.log(`✅ ${Object.keys(slugMap).length} categories (with children) seeded`);
 
+  // 👑 ادمین: 09110000000 (در پروداکشن شماره خودتان را بگذارید)
+  await User.findOneAndUpdate(
+    { phone: '09110000000' },
+    { phone: '09110000000', name: 'مدیر نردبان', city: 'تهران', role: 'admin' },
+    { upsert: true }
+  );
+
   const demoUser = await User.findOneAndUpdate(
     { phone: '09120000000' },
     { phone: '09120000000', name: 'کاربر نمونه', city: 'تهران' },
