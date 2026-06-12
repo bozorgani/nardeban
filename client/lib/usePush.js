@@ -12,6 +12,34 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 /**
+ * گرفتن registration سرویس‌ورکر — اگر ثبت نشده بود، همین‌جا ثبت می‌کند.
+ * ⚠️ عمداً از navigator.serviceWorker.ready استفاده نمی‌کنیم چون اگر SW
+ * ثبت نشده باشد آن Promise برای همیشه معلق می‌ماند (باگ سوییچ نوتیفیکیشن).
+ */
+async function getSWRegistration() {
+  let reg = await navigator.serviceWorker.getRegistration('/');
+  if (!reg) {
+    reg = await navigator.serviceWorker.register('/sw.js');
+  }
+  // صبر تا فعال شدن (حداکثر ۱۰ ثانیه)
+  if (!reg.active) {
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('سرویس‌ورکر فعال نشد — صفحه را رفرش کنید')), 10000);
+      const sw = reg.installing || reg.waiting;
+      if (!sw) { clearTimeout(timer); return resolve(); }
+      sw.addEventListener('statechange', function fn() {
+        if (sw.state === 'activated') {
+          clearTimeout(timer);
+          sw.removeEventListener('statechange', fn);
+          resolve();
+        }
+      });
+    });
+  }
+  return reg;
+}
+
+/**
  * مدیریت اشتراک Web Push
  * خروجی: { supported, permission, subscribed, loading, enable, disable }
  */
@@ -21,7 +49,7 @@ export function usePush(user) {
   const [subscribed, setSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // بررسی پشتیبانی و وضعیت فعلی
+  // بررسی پشتیبانی و وضعیت فعلی (بدون register — فقط چک)
   useEffect(() => {
     (async () => {
       const ok =
@@ -34,8 +62,8 @@ export function usePush(user) {
 
       setPermission(Notification.permission);
       try {
-        const reg = await navigator.serviceWorker.ready;
-        const sub = await reg.pushManager.getSubscription();
+        const reg = await navigator.serviceWorker.getRegistration('/');
+        const sub = reg ? await reg.pushManager.getSubscription() : null;
         setSubscribed(!!sub);
       } catch {
         /* ignore */
@@ -46,14 +74,15 @@ export function usePush(user) {
   }, [user]);
 
   const enable = useCallback(async () => {
-    if (!supported || !user) return { error: 'پشتیبانی نمی‌شود' };
+    if (!supported || !user) return { error: 'مرورگر شما پشتیبانی نمی‌کند' };
     setLoading(true);
     try {
       const perm = await Notification.requestPermission();
       setPermission(perm);
-      if (perm !== 'granted') return { error: 'اجازهٔ نوتیفیکیشن داده نشد' };
+      if (perm !== 'granted')
+        return { error: 'اجازهٔ نوتیفیکیشن داده نشد — از تنظیمات مرورگر فعال کنید' };
 
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await getSWRegistration();
       let sub = await reg.pushManager.getSubscription();
       if (!sub) {
         const { key } = await api('/push/vapid-public-key');
@@ -66,7 +95,7 @@ export function usePush(user) {
       setSubscribed(true);
       return { ok: true };
     } catch (err) {
-      return { error: err.message || 'خطا در فعال‌سازی' };
+      return { error: err.message || 'خطا در فعال‌سازی نوتیفیکیشن' };
     } finally {
       setLoading(false);
     }
@@ -75,8 +104,8 @@ export function usePush(user) {
   const disable = useCallback(async () => {
     setLoading(true);
     try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
+      const reg = await navigator.serviceWorker.getRegistration('/');
+      const sub = reg ? await reg.pushManager.getSubscription() : null;
       if (sub) {
         await api('/push/unsubscribe', {
           method: 'POST',

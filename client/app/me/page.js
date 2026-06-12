@@ -51,9 +51,10 @@ function PushToggle({ user }) {
   if (!supported) return null;
 
   const toggle = async () => {
-    const res = subscribed ? await disable() : await enable();
+    const wasOn = subscribed; // state بعد از await عوض می‌شود — پیام درست بر اساس حالت قبلی
+    const res = wasOn ? await disable() : await enable();
     if (res?.error) toast.error(res.error);
-    else toast.success(subscribed ? 'نوتیفیکیشن غیرفعال شد' : 'نوتیفیکیشن فعال شد 🔔');
+    else toast.success(wasOn ? 'نوتیفیکیشن غیرفعال شد' : 'نوتیفیکیشن فعال شد 🔔');
   };
 
   return (
