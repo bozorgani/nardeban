@@ -79,10 +79,10 @@ export default function CategorySidebar({ tree = [] }) {
         </ul>
       </div>
 
-      <hr className="border-gray-100" />
+      <hr className="hidden border-gray-100 md:block" />
 
-      {/* شهر */}
-      <div>
+      {/* شهر — در موبایل از دکمه بالای صفحه انتخاب می‌شود */}
+      <div className="hidden md:block">
         <h2 className="mb-3 text-xs font-bold text-gray-400">شهر</h2>
         <select
           value={params.get('city') || ''}
@@ -96,8 +96,8 @@ export default function CategorySidebar({ tree = [] }) {
         </select>
       </div>
 
-      {/* قیمت */}
-      <div>
+      {/* قیمت — فقط دسکتاپ */}
+      <div className="hidden md:block">
         <h2 className="mb-3 text-xs font-bold text-gray-400">قیمت (تومان)</h2>
         <div className="flex items-center gap-2">
           <input
@@ -122,8 +122,8 @@ export default function CategorySidebar({ tree = [] }) {
         </div>
       </div>
 
-      {/* مرتب‌سازی */}
-      <div>
+      {/* مرتب‌سازی — فقط دسکتاپ */}
+      <div className="hidden md:block">
         <h2 className="mb-3 text-xs font-bold text-gray-400">مرتب‌سازی</h2>
         <select
           value={params.get('sort') || 'newest'}

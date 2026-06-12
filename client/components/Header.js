@@ -48,6 +48,8 @@ function SearchBar() {
   const router = useRouter();
   const params = useSearchParams();
   const [q, setQ] = useState(params.get('q') || '');
+  const [cityOpen, setCityOpen] = useState(false);
+  const city = params.get('city') || '';
 
   // وقتی URL عوض شد، مقدار باکس همگام بماند
   useEffect(() => {
@@ -64,45 +66,94 @@ function SearchBar() {
     router.push(`/?${sp.toString()}`);
   };
 
-  const setCity = (city) => {
+  const setCity = (c) => {
     const sp = new URLSearchParams(params.toString());
-    if (city) sp.set('city', city);
+    if (c) sp.set('city', c);
     else sp.delete('city');
     sp.delete('page');
+    setCityOpen(false);
     router.push(`/?${sp.toString()}`);
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-1 items-center gap-2">
-      <div className="relative flex-1">
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="جستجو در همهٔ آگهی‌ها..."
-          className="w-full rounded-xl border border-gray-200 bg-gray-100 py-2.5 pr-10 pl-3 text-sm outline-none transition focus:border-brand focus:bg-white"
-        />
+    <>
+      <form onSubmit={submit} className="flex flex-1 items-center gap-2">
+        <div className="relative flex-1">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="جستجو در همهٔ آگهی‌ها..."
+            className="w-full rounded-xl border border-gray-200 bg-gray-100 py-2.5 pr-10 pl-3 text-sm outline-none transition focus:border-brand focus:bg-white"
+          />
+          <button
+            type="submit"
+            aria-label="جستجو"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand"
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </button>
+        </div>
+
+        {/* شهر انتخابی — موبایل: دکمه + پاپ‌آپ | دسکتاپ: select */}
         <button
-          type="submit"
-          aria-label="جستجو"
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand"
+          type="button"
+          onClick={() => setCityOpen(true)}
+          className="flex shrink-0 items-center gap-1 rounded-xl border border-gray-200 bg-white px-2.5 py-2.5 text-sm font-bold text-gray-700 transition hover:border-gray-300 md:hidden"
         >
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <circle cx="11" cy="11" r="7" />
-            <path d="m21 21-4.3-4.3" />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0z" /><circle cx="12" cy="10" r="3" />
           </svg>
+          {city || 'همه شهرها'}
         </button>
-      </div>
-      <select
-        value={params.get('city') || ''}
-        onChange={(e) => setCity(e.target.value)}
-        className="hidden rounded-xl border border-gray-200 bg-white px-2.5 py-2.5 text-sm outline-none focus:border-brand md:block"
-      >
-        <option value="">همه شهرها</option>
-        {CITIES.map((c) => (
-          <option key={c} value={c}>{c}</option>
-        ))}
-      </select>
-    </form>
+        <select
+          value={city}
+          onChange={(e) => setCity(e.target.value)}
+          className="hidden rounded-xl border border-gray-200 bg-white px-2.5 py-2.5 text-sm outline-none focus:border-brand md:block"
+        >
+          <option value="">همه شهرها</option>
+          {CITIES.map((c) => (
+            <option key={c} value={c}>{c}</option>
+          ))}
+        </select>
+      </form>
+
+      {/* پاپ‌آپ انتخاب شهر (موبایل) */}
+      {cityOpen && (
+        <div className="fixed inset-0 z-[60] md:hidden" onClick={() => setCityOpen(false)}>
+          <div className="absolute inset-0 bg-black/40" />
+          <div
+            className="absolute inset-x-0 bottom-0 max-h-[70vh] overflow-y-auto rounded-t-3xl bg-white p-5 pb-8"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-200" />
+            <h3 className="mb-3 text-base font-extrabold text-gray-800">انتخاب شهر</h3>
+            <ul className="divide-y divide-gray-50">
+              <li>
+                <button
+                  onClick={() => setCity('')}
+                  className={`w-full py-3 text-right text-sm ${!city ? 'font-bold text-brand' : 'text-gray-700'}`}
+                >
+                  همه شهرها {!city && '✓'}
+                </button>
+              </li>
+              {CITIES.map((c) => (
+                <li key={c}>
+                  <button
+                    onClick={() => setCity(c)}
+                    className={`w-full py-3 text-right text-sm ${city === c ? 'font-bold text-brand' : 'text-gray-700'}`}
+                  >
+                    {c} {city === c && '✓'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -134,7 +185,8 @@ export default function Header() {
           <SearchBar />
         </Suspense>
 
-        <nav className="flex shrink-0 items-center gap-2">
+        {/* در موبایل ناوبری پایین جایگزین است */}
+        <nav className="hidden shrink-0 items-center gap-2 md:flex">
           <ChatLink />
           {user ? (
             <div className="relative" ref={menuRef}>
