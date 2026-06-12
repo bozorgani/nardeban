@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import AdCard from '../../components/AdCard';
 
 export default function FavoritesPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, refresh } = useAuth();
   const router = useRouter();
   const [favs, setFavs] = useState(null);
 
@@ -16,18 +17,48 @@ export default function FavoritesPage() {
     if (user) api('/users/favorites').then((d) => setFavs(d.favorites)).catch(() => setFavs([]));
   }, [loading, user, router]);
 
+  const removeAll = async () => {
+    if (!confirm('همهٔ نشان‌ها حذف شوند؟')) return;
+    await Promise.allSettled(favs.map((f) => api(`/users/favorites/${f._id}`, { method: 'POST' })));
+    setFavs([]);
+    refresh();
+  };
+
   if (loading || !user || favs === null)
-    return <p className="text-center text-gray-500">در حال بارگذاری...</p>;
+    return <p className="py-16 text-center text-gray-400">در حال بارگذاری...</p>;
 
   return (
-    <div>
-      <h1 className="mb-4 text-lg font-extrabold">نشان‌شده‌ها ({Number(favs.length).toLocaleString('fa-IR')})</h1>
+    <div className="mx-auto max-w-5xl">
+      <div className="mb-5 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-extrabold text-gray-900">❤️ نشان‌شده‌ها</h1>
+          <p className="mt-0.5 text-sm text-gray-400">
+            {Number(favs.length).toLocaleString('fa-IR')} آگهی ذخیره شده
+          </p>
+        </div>
+        {favs.length > 0 && (
+          <button
+            onClick={removeAll}
+            className="rounded-xl px-3 py-2 text-xs text-red-400 transition hover:bg-red-50 hover:text-red-600"
+          >
+            حذف همه
+          </button>
+        )}
+      </div>
+
       {favs.length === 0 ? (
-        <div className="rounded-xl border bg-white p-10 text-center text-gray-500">
-          هنوز آگهی‌ای نشان نکرده‌اید. ❤️
+        <div className="rounded-3xl border border-dashed border-gray-200 bg-white p-14 text-center">
+          <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-rose-50 text-4xl">🤍</span>
+          <p className="mt-4 font-bold text-gray-700">هنوز چیزی نشان نکرده‌اید</p>
+          <p className="mt-1 text-sm leading-7 text-gray-400">
+            با زدن دکمهٔ «نشان کردن» در هر آگهی، آن را اینجا ذخیره کنید.
+          </p>
+          <Link href="/" className="mt-4 inline-block rounded-2xl bg-brand px-6 py-3 text-sm font-bold text-white shadow-lg shadow-brand/25">
+            مرور آگهی‌ها
+          </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {favs.map((ad) => (
             <AdCard key={ad._id} ad={ad} />
           ))}
