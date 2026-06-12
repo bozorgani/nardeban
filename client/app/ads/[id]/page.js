@@ -128,6 +128,25 @@ export default async function AdPage({ params }) {
               </div>
             )}
 
+            {/* کارت فروشنده → پروفایل عمومی */}
+            <Link
+              href={`/users/${ownerId}`}
+              className="mb-5 flex items-center gap-3 rounded-xl border border-gray-200 bg-white p-4 transition hover:border-brand/40 hover:shadow-sm"
+            >
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-light text-lg font-black text-brand">
+                {(ad.owner?.name || 'ن').charAt(0)}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-base font-bold text-gray-800">
+                  {ad.owner?.name || 'کاربر نردبان'}
+                </span>
+                <span className="block text-sm text-gray-400">
+                  مشاهده پروفایل و همهٔ آگهی‌ها
+                </span>
+              </span>
+              <span className="text-gray-300">◀</span>
+            </Link>
+
             <p className="mb-4 text-sm text-gray-400">
               👁 {Number(ad.views || 0).toLocaleString('fa-IR')} بازدید · شناسه آگهی: {ad._id.slice(-8)}
             </p>
