@@ -151,6 +151,15 @@ export default function Header() {
 
         {/* در موبایل ناوبری پایین جایگزین است */}
         <nav className="hidden shrink-0 items-center gap-2 md:flex">
+          {user?.role === 'admin' && (
+            <Link
+              href="/admin"
+              className="flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm font-bold text-amber-700 transition hover:bg-amber-100"
+              title="پنل مدیریت"
+            >
+              👑 <span className="hidden lg:inline">پنل مدیریت</span>
+            </Link>
+          )}
           <ChatLink />
           {user ? (
             <div className="relative" ref={menuRef}>

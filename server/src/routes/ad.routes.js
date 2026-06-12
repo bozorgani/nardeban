@@ -184,9 +184,13 @@ router.patch('/:id', requireAuth, upload.array('images', 5), async (req, res, ne
       'condition', 'itemType', 'model', 'features', 'contactPhone',
     ];
     const wasUnderReview = ['pending', 'rejected'].includes(ad.status);
-    const contentChanged = allowed.some(
+    let contentChanged = allowed.some(
       (k) => req.body[k] !== undefined && String(req.body[k]) !== String(ad[k] ?? '')
     );
+    // تغییر قیمت/دسته هم محتوایی محسوب می‌شود
+    if (req.body.price !== undefined && Number(req.body.price) !== ad.price) contentChanged = true;
+    if (req.body.category && String(req.body.category) !== String(ad.category)) contentChanged = true;
+
     for (const key of allowed) if (req.body[key] !== undefined) ad[key] = req.body[key];
 
     // مالک فقط بین وضعیت‌های عادی جابجا می‌شود؛ تایید (active) فقط با ادمین
@@ -222,6 +226,7 @@ router.patch('/:id', requireAuth, upload.array('images', 5), async (req, res, ne
     //  keepImages = JSON آرایه‌ای از مسیرهای قبلی که باید بمانند (به همان ترتیب — اولی = اصلی)
     //  فایل‌های جدید آپلودی به انتها اضافه می‌شوند (سقف ۵)
     const added = (req.files || []).map((f) => `/uploads/${f.filename}`);
+    const imagesBefore = JSON.stringify(ad.images);
     if (req.body.keepImages !== undefined) {
       let keep = [];
       try { keep = JSON.parse(req.body.keepImages); } catch { keep = []; }
@@ -230,9 +235,10 @@ router.patch('/:id', requireAuth, upload.array('images', 5), async (req, res, ne
     } else if (added.length) {
       ad.images = [...ad.images, ...added].slice(0, 5);
     }
+    if (JSON.stringify(ad.images) !== imagesBefore) contentChanged = true;
 
-    // اگر آگهیِ ردشده/در انتظار ویرایش محتوایی شد → دوباره به صف بررسی برود
-    if (wasUnderReview && (contentChanged || added.length || req.body.keepImages !== undefined)) {
+    // هر ویرایش محتوایی (چه pending/rejected چه active) → بازگشت به صف بررسی مدیر
+    if (contentChanged) {
       ad.status = 'pending';
       ad.rejectReason = '';
     }

@@ -100,7 +100,7 @@ function DashboardTab() {
 }
 
 /* ================== تب آگهی‌ها ================== */
-function AdsTab({ initialStatus = '' }) {
+function AdsTab({ initialStatus = '', onPendingChange }) {
   const toast = useToast();
   const [data, setData] = useState(null);
   const [q, setQ] = useState('');
@@ -124,13 +124,17 @@ function AdsTab({ initialStatus = '' }) {
       await api(`/admin/ads/${id}`, { method: 'PATCH', body: { status: s } });
       toast.success('وضعیت تغییر کرد');
       load();
+      onPendingChange?.();
     } catch (err) { toast.error(err.message); }
   };
   const approveAd = async (id) => {
     try {
       await api(`/admin/ads/${id}/approve`, { method: 'POST' });
       toast.success('آگهی تایید و منتشر شد ✅');
+      // حذف فوری از لیست pending (بدون انتظار fetch)
+      setData((prev) => prev && { ...prev, total: prev.total - 1, ads: prev.ads.filter((a) => a._id !== id) });
       load();
+      onPendingChange?.();
     } catch (err) { toast.error(err.message); }
   };
   const [rejecting, setRejecting] = useState(null); // {id, title}
@@ -140,9 +144,11 @@ function AdsTab({ initialStatus = '' }) {
     try {
       await api(`/admin/ads/${rejecting.id}/reject`, { method: 'POST', body: { reason: rejectReason.trim() } });
       toast.success('آگهی رد شد و دلیل برای کاربر ارسال شد');
+      setData((prev) => prev && { ...prev, total: prev.total - 1, ads: prev.ads.filter((a) => a._id !== rejecting.id) });
       setRejecting(null);
       setRejectReason('');
       load();
+      onPendingChange?.();
     } catch (err) { toast.error(err.message); }
   };
   const removeAd = async (id) => {
@@ -157,6 +163,7 @@ function AdsTab({ initialStatus = '' }) {
       await api(`/admin/ads/${id}`, { method: 'DELETE' });
       toast.success('آگهی حذف شد');
       load();
+      onPendingChange?.();
     } catch (err) { toast.error(err.message); }
   };
 
@@ -201,9 +208,7 @@ function AdsTab({ initialStatus = '' }) {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <Link href={`/ads/${ad._id}`} className="line-clamp-1 text-sm font-bold text-gray-800 hover:text-brand">
-                    {ad.title}
-                  </Link>
+                  <p className="line-clamp-1 text-sm font-bold text-gray-800">{ad.title}</p>
                   <p className="mt-0.5 text-[11px] text-gray-400">
                     {formatPrice(ad)} · {ad.city} · {timeAgo(ad.createdAt)} · 👁 {Number(ad.views || 0).toLocaleString('fa-IR')}
                   </p>
@@ -211,6 +216,14 @@ function AdsTab({ initialStatus = '' }) {
                     {ad.owner?.phone} {ad.owner?.isBlocked && '🚫'}
                   </p>
                 </div>
+                <Link
+                  href={`/ads/${ad._id}`}
+                  target="_blank"
+                  className="flex-shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 transition hover:border-brand hover:text-brand"
+                  title="مشاهده آگهی در تب جدید"
+                >
+                  👁 مشاهده
+                </Link>
                 {ad.status === 'pending' ? (
                   <div className="flex flex-shrink-0 flex-col gap-1.5 sm:flex-row">
                     <button onClick={() => approveAd(ad._id)} className="rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-emerald-600">
@@ -453,15 +466,17 @@ export default function AdminPage() {
   const [tab, setTab] = useState('dashboard');
   const [pendingCount, setPendingCount] = useState(0);
 
-  // شمارنده در انتظار تایید (هر ۳۰ ثانیه)
+  const refreshPending = useCallback(() => {
+    api('/admin/ads?status=pending&limit=1').then((d) => setPendingCount(d.total)).catch(() => {});
+  }, []);
+
+  // شمارنده در انتظار تایید (اولیه + هر ۳۰ ثانیه + فوری بعد از هر اقدام)
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
-    const load = () =>
-      api('/admin/ads?status=pending&limit=1').then((d) => setPendingCount(d.total)).catch(() => {});
-    load();
-    const t = setInterval(load, 30000);
+    refreshPending();
+    const t = setInterval(refreshPending, 30000);
     return () => clearInterval(t);
-  }, [user]);
+  }, [user, refreshPending]);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'admin')) router.replace('/');
@@ -486,7 +501,7 @@ export default function AdminPage() {
       </div>
 
       {/* تب‌ها */}
-      <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+      <div className="mb-5 flex gap-2 overflow-x-auto pb-1 pt-2">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -497,7 +512,7 @@ export default function AdminPage() {
           >
             {t.label}
             {t.id === 'pending' && pendingCount > 0 && (
-              <span className="absolute -left-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-brand px-1.5 text-[10px] font-bold text-white shadow">
+              <span className={`mr-1.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${tab === t.id ? 'bg-white text-gray-900' : 'bg-brand text-white'}`}>
                 {Number(pendingCount).toLocaleString('fa-IR')}
               </span>
             )}
@@ -506,8 +521,8 @@ export default function AdminPage() {
       </div>
 
       {tab === 'dashboard' && <DashboardTab />}
-      {tab === 'pending' && <AdsTab key="pending" initialStatus="pending" />}
-      {tab === 'ads' && <AdsTab key="all" />}
+      {tab === 'pending' && <AdsTab key="pending" initialStatus="pending" onPendingChange={refreshPending} />}
+      {tab === 'ads' && <AdsTab key="all" onPendingChange={refreshPending} />}
       {tab === 'users' && <UsersTab />}
       {tab === 'reviews' && <ReviewsTab />}
     </div>

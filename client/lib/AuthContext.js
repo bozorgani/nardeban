@@ -5,6 +5,16 @@ import { api } from './api';
 
 const AuthContext = createContext(null);
 
+// کوکی توکن — برای اینکه SSR (صفحه جزئیات آگهی) هم بتواند با هویت کاربر fetch کند
+function setTokenCookie(token) {
+  if (typeof document === 'undefined') return;
+  if (token) {
+    document.cookie = `nardeban_token=${token}; path=/; max-age=${30 * 24 * 3600}; SameSite=Lax`;
+  } else {
+    document.cookie = 'nardeban_token=; path=/; max-age=0';
+  }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -13,10 +23,12 @@ export function AuthProvider({ children }) {
     try {
       const token = localStorage.getItem('nardeban_token');
       if (!token) return setUser(null);
+      setTokenCookie(token); // همگام‌سازی کوکی برای SSR
       const { user } = await api('/auth/me');
       setUser(user);
     } catch {
       localStorage.removeItem('nardeban_token');
+      setTokenCookie(null);
       setUser(null);
     } finally {
       setLoading(false);
@@ -29,11 +41,13 @@ export function AuthProvider({ children }) {
 
   const login = (token, userData) => {
     localStorage.setItem('nardeban_token', token);
+    setTokenCookie(token);
     setUser(userData);
   };
 
   const logout = async () => {
     localStorage.removeItem('nardeban_token');
+    setTokenCookie(null);
     setUser(null);
     // بستن اتصال real-time
     try {

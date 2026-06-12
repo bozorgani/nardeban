@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import FavoriteButton from '../../../components/FavoriteButton';
 import AdMap from '../../../components/AdMap';
 import ContactBox from './ContactBox';
@@ -8,7 +9,13 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 async function getAd(id) {
   try {
-    const res = await fetch(`${API}/api/ads/${id}`, { cache: 'no-store' });
+    // توکن کاربر از کوکی → مالک/ادمین آگهی pending/rejected خود را هم می‌بیند
+    const cookieStore = await cookies();
+    const token = cookieStore.get('nardeban_token')?.value;
+    const res = await fetch(`${API}/api/ads/${id}`, {
+      cache: 'no-store',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     if (!res.ok) return null;
     const data = await res.json();
     return data.ad;
