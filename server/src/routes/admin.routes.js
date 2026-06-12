@@ -7,6 +7,7 @@ import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import Report from '../models/Report.js';
 import { requireAdmin } from '../middleware/auth.js';
+import { deleteUploads } from '../utils/files.js';
 
 const router = Router();
 router.use(requireAdmin); // همهٔ مسیرها فقط ادمین
@@ -143,16 +144,27 @@ router.post('/ads/:id/reject', async (req, res, next) => {
   }
 });
 
+// حذف کامل آگهی + گفتگوها + پیام‌ها + همه فایل‌های عکس از دیسک
+async function deleteAdCompletely(adId) {
+  const ad = await Ad.findByIdAndDelete(adId);
+  if (!ad) return null;
+  const convs = await Conversation.find({ ad: adId }).select('_id');
+  const convIds = convs.map((c) => c._id);
+  // عکس‌های داخل پیام‌های چت
+  const imgMsgs = await Message.find({ conversation: { $in: convIds }, image: { $ne: '' } }).select('image');
+  await Promise.all([
+    Message.deleteMany({ conversation: { $in: convIds } }),
+    Conversation.deleteMany({ ad: adId }),
+  ]);
+  deleteUploads([...ad.images, ...imgMsgs.map((m) => m.image)]);
+  return ad;
+}
+
 // حذف هر آگهی + گفتگوها و پیام‌هایش
 router.delete('/ads/:id', async (req, res, next) => {
   try {
-    const ad = await Ad.findByIdAndDelete(req.params.id);
+    const ad = await deleteAdCompletely(req.params.id);
     if (!ad) return res.status(404).json({ message: 'آگهی یافت نشد' });
-    const convs = await Conversation.find({ ad: ad._id }).select('_id');
-    await Promise.all([
-      Message.deleteMany({ conversation: { $in: convs.map((c) => c._id) } }),
-      Conversation.deleteMany({ ad: ad._id }),
-    ]);
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -364,12 +376,7 @@ router.post('/reports/ad/:adId/resolve', async (req, res, next) => {
       ad.rejectReason = r;
       await ad.save();
     } else if (action === 'delete') {
-      await Ad.findByIdAndDelete(adId);
-      const convs = await Conversation.find({ ad: adId }).select('_id');
-      await Promise.all([
-        Message.deleteMany({ conversation: { $in: convs.map((c) => c._id) } }),
-        Conversation.deleteMany({ ad: adId }),
-      ]);
+      await deleteAdCompletely(adId);
     }
 
     const newStatus = action === 'dismiss' ? 'dismissed' : 'resolved';

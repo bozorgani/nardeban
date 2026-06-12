@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import { api, API_URL, getToken, digitsOnly, imgUrl } from '../../../../lib/api';
 import { useAuth } from '../../../../lib/AuthContext';
 import { useToast } from '../../../../components/Toast';
+import CategoryFields from '../../../../components/CategoryFields';
 
 const MapPicker = dynamic(() => import('../../../../components/MapPicker'), {
   ssr: false,
@@ -43,6 +44,7 @@ export default function EditAdPage({ params }) {
   const [isFree, setIsFree] = useState(false);
   const [condition, setCondition] = useState('');
   const [itemType, setItemType] = useState('');
+  const [attrs, setAttrs] = useState({});
   const [model, setModel] = useState('');
   const [features, setFeatures] = useState('');
   const [contactPhone, setContactPhone] = useState('');
@@ -80,6 +82,7 @@ export default function EditAdPage({ params }) {
         setIsFree(!!ad.isFree);
         setCondition(ad.condition || '');
         setItemType(ad.itemType || '');
+        setAttrs(ad.attrs || {});
         setModel(ad.model || '');
         setFeatures(ad.features || '');
         setContactPhone(ad.contactPhone || user.phone);
@@ -132,6 +135,7 @@ export default function EditAdPage({ params }) {
     fd.set('itemType', itemType.trim());
     fd.set('model', model.trim());
     fd.set('features', features.trim());
+    fd.set('attrs', JSON.stringify(attrs));
     fd.set('contactPhone', digitsOnly(contactPhone));
     fd.set('chatEnabled', String(chatEnabled));
     fd.set('callEnabled', String(callEnabled));
@@ -287,6 +291,8 @@ export default function EditAdPage({ params }) {
             </div>
           </div>
         </div>
+
+        <CategoryFields categoryId={category} values={attrs} onChange={setAttrs} />
 
         <div>
           <label className="mb-1.5 block font-bold">قیمت (تومان)</label>

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Category from '../models/Category.js';
+import { CATEGORY_FIELDS, findRootSlug } from '../config/category-fields.js';
 
 const router = Router();
 
@@ -22,6 +23,22 @@ router.get('/', async (_req, res, next) => {
       }));
 
     res.json({ categories: cats, tree: build('root') });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// فیلدهای اختصاصی یک دسته: ?slug=light-cars یا ?id=<categoryId>
+router.get('/fields', async (req, res, next) => {
+  try {
+    let rootSlug = null;
+    if (req.query.slug) {
+      const cat = await Category.findOne({ slug: req.query.slug }).lean();
+      if (cat) rootSlug = cat.parent ? await findRootSlug(Category, cat._id) : cat.slug;
+    } else if (req.query.id) {
+      rootSlug = await findRootSlug(Category, req.query.id);
+    }
+    res.json({ rootSlug, fields: CATEGORY_FIELDS[rootSlug] || [] });
   } catch (err) {
     next(err);
   }

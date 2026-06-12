@@ -1,6 +1,9 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import { globalLimiter, otpLimiter, verifyLimiter, writeLimiter } from './middleware/limiters.js';
 import path from 'path';
 import http from 'http';
 import { fileURLToPath } from 'url';
@@ -17,12 +20,42 @@ import reportRoutes from './routes/report.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
+app.set('trust proxy', 1); // پشت Nginx/پروکسی، IP واقعی برای rate-limit
 
+/* ---------- امنیت ---------- */
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' }, // عکس‌ها از دامنه فرانت لود می‌شوند
+    contentSecurityPolicy: false, // API است؛ CSP سمت فرانت اعمال می‌شود
+  })
+);
 app.use(cors({ origin: process.env.CLIENT_ORIGIN || 'http://localhost:3000', credentials: true }));
 app.use(express.json({ limit: '2mb' }));
 
-// static serving of uploaded images
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+// پاکسازی اپراتورهای مونگو ($ و .) از ورودی‌ها — ضد NoSQL injection
+app.use((req, _res, next) => {
+  if (req.body) mongoSanitize.sanitize(req.body);
+  if (req.params) mongoSanitize.sanitize(req.params);
+  // req.query در Express 5 فقط-خواندنی است؛ مقادیر آن به‌صورت رشته استفاده می‌شوند
+  next();
+});
+
+/* ---------- Rate Limiting ---------- */
+app.use('/api/', globalLimiter);
+app.use('/api/auth/request-otp', otpLimiter);
+app.use('/api/auth/verify-otp', verifyLimiter);
+app.use('/api/reports', (req, res, next) =>
+  req.method === 'POST' ? writeLimiter(req, res, next) : next()
+);
+
+// static serving of uploaded images (با کش طولانی — فایل‌ها immutable اند)
+app.use(
+  '/uploads',
+  express.static(path.join(__dirname, '..', 'uploads'), {
+    maxAge: '30d',
+    immutable: true,
+  })
+);
 
 app.get('/api/health', (_req, res) => res.json({ ok: true, name: 'nardeban-api' }));
 

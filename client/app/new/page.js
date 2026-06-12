@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { api, API_URL, getToken, digitsOnly } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../components/Toast';
+import CategoryFields from '../../components/CategoryFields';
 
 const MapPicker = dynamic(() => import('../../components/MapPicker'), {
   ssr: false,
@@ -51,6 +52,7 @@ export default function NewAdWizard() {
   const [neighborhood, setNeighborhood] = useState('');
 
   const [itemType, setItemType] = useState('');
+  const [attrs, setAttrs] = useState({}); // فیلدهای اختصاصی دسته
   const [condition, setCondition] = useState('');
   const [price, setPrice] = useState('');
   const [isFree, setIsFree] = useState(false);
@@ -146,6 +148,7 @@ export default function NewAdWizard() {
     fd.set('condition', condition);
     fd.set('model', model.trim());
     fd.set('features', features.trim());
+    fd.set('attrs', JSON.stringify(attrs));
     fd.set('contactPhone', digitsOnly(contactPhone));
     fd.set('chatEnabled', String(chatEnabled));
     fd.set('callEnabled', String(callEnabled));
@@ -397,6 +400,13 @@ export default function NewAdWizard() {
         {/* ====== مرحله ۴: ویژگی‌ها ====== */}
         {step === 4 && (
           <div className="space-y-5 text-sm">
+            {/* فیلدهای اختصاصی دسته (برند/سال/متراژ/...) */}
+            <CategoryFields
+              categoryId={currentCat?._id}
+              values={attrs}
+              onChange={setAttrs}
+            />
+
             <div>
               <label className="mb-1.5 block font-bold">نوع کالا / خدمات</label>
               <input

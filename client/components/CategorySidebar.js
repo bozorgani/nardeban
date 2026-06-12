@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { digitsOnly } from '../lib/api';
 import { cityLabel, parseCities } from '../lib/cities';
 import CityModal from './CityModal';
+import AttrFilters from './AttrFilters';
 
 /* پیدا کردن مسیر (اجداد) دستهٔ فعال در درخت چندسطحی */
 function findPath(nodes, slug, path = []) {
@@ -257,6 +258,9 @@ export default function CategorySidebar({ tree = [] }) {
             />
           </div>
         </div>
+
+        {/* فیلترهای اختصاصی دسته */}
+        <AttrFilters />
 
         {/* مرتب‌سازی — فقط دسکتاپ */}
         <div className="hidden md:block">

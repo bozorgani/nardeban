@@ -5,6 +5,7 @@ import Message from '../models/Message.js';
 import Ad from '../models/Ad.js';
 import { requireAuth } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
+import { optimizeImages } from '../middleware/optimizeImages.js';
 import { sendPushToUser } from '../push.js';
 import { ioInstance, isUserOnline } from '../socket.js';
 
@@ -203,6 +204,7 @@ router.post('/conversations/:id/messages', async (req, res, next) => {
 router.post(
   '/conversations/:id/images',
   upload.single('image'),
+  optimizeImages,
   async (req, res, next) => {
     try {
       if (!req.file) return res.status(400).json({ message: 'عکسی انتخاب نشده است' });

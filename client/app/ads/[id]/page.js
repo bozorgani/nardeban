@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import FavoriteButton from '../../../components/FavoriteButton';
 import AdMap from '../../../components/AdMap';
@@ -38,13 +39,7 @@ export default async function AdPage({ params }) {
   const { id } = await params;
   const ad = await getAd(id);
 
-  if (!ad) {
-    return (
-      <div className="rounded-xl border bg-white p-10 text-center text-base">
-        آگهی یافت نشد. <Link href="/" className="text-brand underline">بازگشت</Link>
-      </div>
-    );
-  }
+  if (!ad) notFound(); // صفحه ۴۰۴ سفارشی + status code درست
 
   const priceText = ad.isFree
     ? 'رایگان'
@@ -112,6 +107,21 @@ export default async function AdPage({ params }) {
                 <span className="text-lg font-extrabold">{priceText}</span>
               </Row>
               {ad.condition && <Row label="وضعیت">{ad.condition}</Row>}
+              {ad.attrs &&
+                Object.entries(ad.attrs).map(([k, v]) => {
+                  const LABELS = {
+                    brand: 'برند', year: 'سال ساخت', mileage: 'کارکرد', gearbox: 'گیربکس',
+                    fuel: 'سوخت', bodyStatus: 'وضعیت بدنه', area: 'متراژ', rooms: 'تعداد اتاق',
+                    buildYear: 'سال ساخت', deposit: 'ودیعه', rent: 'اجارهٔ ماهانه',
+                    elevator: 'آسانسور', parking: 'پارکینگ', storage: 'حافظه', ram: 'رم (GB)',
+                  };
+                  const numeric = /^\d+$/.test(v);
+                  return (
+                    <Row key={k} label={LABELS[k] || k}>
+                      {numeric ? Number(v).toLocaleString('fa-IR') : v}
+                    </Row>
+                  );
+                })}
               {ad.itemType && <Row label="نوع کالا">{ad.itemType}</Row>}
               {ad.model && <Row label="مدل / برند">{ad.model}</Row>}
               <Row label="دسته‌بندی" last>

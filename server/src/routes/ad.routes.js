@@ -4,6 +4,9 @@ import Ad from '../models/Ad.js';
 import Category from '../models/Category.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { upload } from '../middleware/upload.js';
+import { deleteUploads } from '../utils/files.js';
+import { optimizeImages } from '../middleware/optimizeImages.js';
+import { writeLimiter } from '../middleware/limiters.js';
 
 const router = Router();
 
@@ -13,6 +16,22 @@ const normalizeFa = (s) =>
 const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // الگویی که فاصله و نیم‌فاصله را یکسان می‌بیند
 const flexible = (w) => escapeRegex(w).replace(/ /g, '[\\s\\u200c]+');
+
+// پارس امن attrs از فرم (JSON string) — فقط مقادیر رشته‌ای کوتاه
+function parseAttrs(raw) {
+  try {
+    const obj = typeof raw === 'string' ? JSON.parse(raw) : raw || {};
+    const out = {};
+    for (const [k, v] of Object.entries(obj)) {
+      if (/^[a-zA-Z][a-zA-Z0-9_]{0,30}$/.test(k) && v !== '' && v != null) {
+        out[k] = String(v).slice(0, 100);
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
 
 // لیست آگهی‌ها + جستجو و فیلتر + صفحه‌بندی
 // GET /api/ads?q=&category=slug&city=&minPrice=&maxPrice=&page=&limit=&sort=
@@ -62,6 +81,28 @@ router.get('/', async (req, res, next) => {
       if (maxPrice) filter.price.$lte = Number(maxPrice);
     }
 
+    // فیلترهای اختصاصی دسته: attr_brand=پراید | attr_year_min=1395 | attr_mileage_max=100000
+    for (const [qk, qv] of Object.entries(req.query)) {
+      if (!qk.startsWith('attr_') || !qv) continue;
+      const m = qk.match(/^attr_(.+?)(_min|_max)?$/);
+      if (!m) continue;
+      const [, key, bound] = m;
+      const field = `attrs.${key}`;
+      if (bound) {
+        // مقایسه عددی روی رشته‌ها با $expr — آگهی بدون این attr (null) نباید پاس شود
+        const conv = { $convert: { input: '$' + field, to: 'double', onError: null, onNull: null } };
+        filter.$expr = filter.$expr || { $and: [] };
+        filter.$expr.$and.push({
+          $and: [
+            { $ne: [conv, null] },
+            { [bound === '_min' ? '$gte' : '$lte']: [conv, Number(qv)] },
+          ],
+        });
+      } else {
+        filter[field] = String(qv);
+      }
+    }
+
     const sortMap = {
       newest: { createdAt: -1 },
       cheapest: { price: 1 },
@@ -74,7 +115,7 @@ router.get('/', async (req, res, next) => {
         .skip((page - 1) * limit)
         .limit(limit)
         // فقط فیلدهای لازم برای کارت — payload سبک‌تر در لیست‌های بزرگ
-        .select('title price isFree city neighborhood images condition createdAt category')
+        .select('title price isFree city neighborhood images condition createdAt category attrs')
         .populate('category', 'name slug icon')
         .lean(),
       Ad.countDocuments(filter),
@@ -136,7 +177,7 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
 });
 
 // ثبت آگهی (با حداکثر ۵ عکس)
-router.post('/', requireAuth, upload.array('images', 5), async (req, res, next) => {
+router.post('/', writeLimiter, requireAuth, upload.array('images', 5), optimizeImages, async (req, res, next) => {
   try {
     const {
       title, description, price, isFree, category, city, neighborhood, contactPhone,
@@ -169,6 +210,7 @@ router.post('/', requireAuth, upload.array('images', 5), async (req, res, next) 
       contactPhone: contactPhone || req.user.phone,
       chatEnabled: chatEnabled !== 'false',
       callEnabled: callEnabled !== 'false',
+      attrs: parseAttrs(req.body.attrs),
     });
 
     res.status(201).json({ ad });
@@ -178,7 +220,7 @@ router.post('/', requireAuth, upload.array('images', 5), async (req, res, next) 
 });
 
 // ویرایش کامل آگهی — فقط مالک (همه فیلدها + مدیریت عکس‌ها)
-router.patch('/:id', requireAuth, upload.array('images', 5), async (req, res, next) => {
+router.patch('/:id', requireAuth, upload.array('images', 5), optimizeImages, async (req, res, next) => {
   try {
     const ad = await Ad.findById(req.params.id);
     if (!ad) return res.status(404).json({ message: 'آگهی یافت نشد' });
@@ -221,6 +263,13 @@ router.patch('/:id', requireAuth, upload.array('images', 5), async (req, res, ne
     if (req.body.callEnabled !== undefined)
       ad.callEnabled = String(req.body.callEnabled) !== 'false';
 
+    // فیلدهای اختصاصی دسته
+    if (req.body.attrs !== undefined) {
+      const parsed = parseAttrs(req.body.attrs);
+      if (JSON.stringify(Object.fromEntries(ad.attrs || new Map())) !== JSON.stringify(parsed)) contentChanged = true;
+      ad.attrs = parsed;
+    }
+
     // موقعیت
     if (req.body.lat !== undefined && req.body.lng !== undefined) {
       ad.location = {
@@ -234,6 +283,7 @@ router.patch('/:id', requireAuth, upload.array('images', 5), async (req, res, ne
     //  فایل‌های جدید آپلودی به انتها اضافه می‌شوند (سقف ۵)
     const added = (req.files || []).map((f) => `/uploads/${f.filename}`);
     const imagesBefore = JSON.stringify(ad.images);
+    const oldImages = [...ad.images];
     if (req.body.keepImages !== undefined) {
       let keep = [];
       try { keep = JSON.parse(req.body.keepImages); } catch { keep = []; }
@@ -242,6 +292,9 @@ router.patch('/:id', requireAuth, upload.array('images', 5), async (req, res, ne
     } else if (added.length) {
       ad.images = [...ad.images, ...added].slice(0, 5);
     }
+    // عکس‌های قدیمی که دیگر استفاده نمی‌شوند → حذف از دیسک
+    const removed = oldImages.filter((p) => !ad.images.includes(p));
+    if (removed.length) deleteUploads(removed);
     if (JSON.stringify(ad.images) !== imagesBefore) contentChanged = true;
 
     // هر ویرایش محتوایی (چه pending/rejected چه active) → بازگشت به صف بررسی مدیر
@@ -264,6 +317,7 @@ router.delete('/:id', requireAuth, async (req, res, next) => {
     if (!ad.owner.equals(req.user._id))
       return res.status(403).json({ message: 'دسترسی ندارید' });
     await ad.deleteOne();
+    deleteUploads(ad.images); // پاکسازی عکس‌ها از دیسک
     res.json({ message: 'آگهی حذف شد' });
   } catch (err) {
     next(err);

@@ -19,6 +19,8 @@ const adSchema = new mongoose.Schema(
     itemType: { type: String, default: '' }, // نوع کالا
     model: { type: String, default: '' }, // مدل / برند
     features: { type: String, default: '' }, // سایر ویژگی‌ها و امکانات
+    // فیلدهای اختصاصی دسته (برند، سال، متراژ، ...) — کلید/مقدار
+    attrs: { type: Map, of: String, default: {} },
     images: [{ type: String }],
     owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     contactPhone: { type: String, required: true },

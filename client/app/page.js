@@ -10,6 +10,10 @@ async function getData(searchParams) {
   for (const key of ['q', 'category', 'city', 'minPrice', 'maxPrice', 'sort']) {
     if (searchParams[key]) sp.set(key, searchParams[key]);
   }
+  // فیلترهای اختصاصی دسته (attr_brand و...)
+  for (const [k, v] of Object.entries(searchParams)) {
+    if (k.startsWith('attr_') && v) sp.set(k, v);
+  }
   sp.set('limit', String(PAGE_SIZE));
   sp.set('page', '1'); // فقط صفحه اول در سرور — بقیه با اسکرول
 
