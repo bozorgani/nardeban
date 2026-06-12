@@ -66,10 +66,17 @@ router.get('/', async (req, res, next) => {
         .sort(sortMap[sort] || sortMap.newest)
         .skip((page - 1) * limit)
         .limit(limit)
+        // فقط فیلدهای لازم برای کارت — payload سبک‌تر در لیست‌های بزرگ
+        .select('title price isFree city neighborhood images condition createdAt category')
         .populate('category', 'name slug icon')
         .lean(),
       Ad.countDocuments(filter),
     ]);
+
+    // فقط عکس اول برای کارت لازم است (کاهش حجم پاسخ)
+    for (const ad of ads) {
+      if (ad.images?.length > 1) ad.images = [ad.images[0]];
+    }
 
     res.json({ ads, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {

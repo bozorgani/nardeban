@@ -32,5 +32,9 @@ const adSchema = new mongoose.Schema(
 
 adSchema.index({ title: 'text', description: 'text' });
 adSchema.index({ createdAt: -1 });
+// ایندکس‌های مرکب برای کوئری لیست (status همیشه در فیلتر هست)
+adSchema.index({ status: 1, createdAt: -1 });
+adSchema.index({ status: 1, city: 1, createdAt: -1 });
+adSchema.index({ status: 1, category: 1, createdAt: -1 });
 
 export default mongoose.model('Ad', adSchema);

@@ -1,15 +1,17 @@
 import { Suspense } from 'react';
-import Link from 'next/link';
-import AdCard from '../components/AdCard';
+import AdFeed from '../components/AdFeed';
 import CategorySidebar from '../components/CategorySidebar';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const PAGE_SIZE = 24; // تعداد آگهی در هر تکه
 
 async function getData(searchParams) {
   const sp = new URLSearchParams();
-  for (const key of ['q', 'category', 'city', 'minPrice', 'maxPrice', 'sort', 'page']) {
+  for (const key of ['q', 'category', 'city', 'minPrice', 'maxPrice', 'sort']) {
     if (searchParams[key]) sp.set(key, searchParams[key]);
   }
+  sp.set('limit', String(PAGE_SIZE));
+  sp.set('page', '1'); // فقط صفحه اول در سرور — بقیه با اسکرول
 
   try {
     const [adsRes, catsRes] = await Promise.all([
@@ -18,21 +20,35 @@ async function getData(searchParams) {
     ]);
     const adsData = await adsRes.json();
     const catsData = await catsRes.json();
-    return { ...adsData, tree: catsData.tree || [], allCats: catsData.categories || [] };
+    return {
+      ...adsData,
+      tree: catsData.tree || [],
+      allCats: catsData.categories || [],
+      query: sp.toString(),
+    };
   } catch {
-    return { ads: [], total: 0, page: 1, pages: 0, tree: [], allCats: [], error: true };
+    return { ads: [], total: 0, pages: 0, tree: [], allCats: [], query: '', error: true };
   }
+}
+
+// متادیتای پویا برای SEO
+export async function generateMetadata({ searchParams }) {
+  const params = await searchParams;
+  const parts = [];
+  if (params.q) parts.push(`جستجوی ${params.q}`);
+  if (params.city) {
+    const cities = String(params.city).split(',').filter(Boolean);
+    parts.push(cities.length === 1 ? `در ${cities[0]}` : `در ${cities.length} شهر`);
+  }
+  const title = parts.length
+    ? `${parts.join(' ')} | نردبان`
+    : 'نردبان | نیازمندی‌های رایگان سراسر ایران';
+  return { title, description: 'خرید و فروش، استخدام، املاک و خودرو — آگهی‌های دست دوم و نو' };
 }
 
 export default async function HomePage({ searchParams }) {
   const params = await searchParams;
-  const { ads, total, page, pages, tree, allCats, error } = await getData(params);
-
-  const pageLink = (p) => {
-    const sp = new URLSearchParams(params);
-    sp.set('page', p);
-    return `/?${sp.toString()}`;
-  };
+  const { ads, total, pages, tree, allCats, query, error } = await getData(params);
 
   // عنوان پویا بر اساس فیلترهای فعال
   const activeCat = allCats.find((c) => c.slug === params.category);
@@ -41,7 +57,6 @@ export default async function HomePage({ searchParams }) {
   if (activeCat) titleParts.push(activeCat.name);
   if (params.city) {
     const cityList = String(params.city).split(',').filter(Boolean);
-    // یک شهر → نام شهر | چند شهر → «۲ شهر»
     titleParts.push(
       cityList.length === 1
         ? `در ${cityList[0]}`
@@ -70,40 +85,14 @@ export default async function HomePage({ searchParams }) {
               </span>
             </div>
 
-            {ads.length === 0 ? (
-              <div className="rounded-2xl border border-gray-200 bg-white p-12 text-center">
-                <p className="mb-2 text-4xl">🔎</p>
-                <p className="font-bold text-gray-700">آگهی‌ای یافت نشد</p>
-                <p className="mt-1 text-sm text-gray-400">
-                  فیلترها را تغییر دهید یا{' '}
-                  <Link href="/" className="text-brand underline">همهٔ آگهی‌ها</Link> را ببینید.
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-                {ads.map((ad) => (
-                  <AdCard key={ad._id} ad={ad} />
-                ))}
-              </div>
-            )}
-
-            {pages > 1 && (
-              <div className="mt-8 flex justify-center gap-2 text-sm">
-                {page > 1 && (
-                  <Link href={pageLink(page - 1)} className="rounded-xl border border-gray-200 bg-white px-4 py-2 transition hover:border-brand hover:text-brand">
-                    → قبلی
-                  </Link>
-                )}
-                <span className="px-3 py-2 text-gray-400">
-                  صفحه {Number(page).toLocaleString('fa-IR')} از {Number(pages).toLocaleString('fa-IR')}
-                </span>
-                {page < pages && (
-                  <Link href={pageLink(page + 1)} className="rounded-xl border border-gray-200 bg-white px-4 py-2 transition hover:border-brand hover:text-brand">
-                    بعدی ←
-                  </Link>
-                )}
-              </div>
-            )}
+            {/* صفحه اول SSR شده؛ بقیه با اسکرول لود می‌شوند */}
+            <AdFeed
+              key={query} /* تغییر فیلتر → ریست کامل فید */
+              initialAds={ads}
+              total={total}
+              pages={pages}
+              query={query}
+            />
           </>
         )}
       </section>
