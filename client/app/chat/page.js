@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api, imgUrl, timeAgo } from '../../lib/api';
+import { api, API_URL, getToken, imgUrl, timeAgo } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import { useSocket } from '../../lib/useSocket';
 import { useToast } from '../../components/Toast';
@@ -125,6 +125,9 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
+  const [imageFile, setImageFile] = useState(null); // عکس انتخاب‌شده برای ارسال
+  const [imagePreview, setImagePreview] = useState(null);
+  const [lightbox, setLightbox] = useState(null); // عکس بازشده تمام‌صفحه
   const [otherTyping, setOtherTyping] = useState(false);
   const [otherOnline, setOtherOnline] = useState(false);
   const [connected, setConnected] = useState(true);
@@ -256,9 +259,55 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
     }, 2000);
   };
 
+  /* ---------- انتخاب و ارسال عکس ---------- */
+  const pickImage = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type))
+      return toast.error('فقط عکس JPG / PNG / WebP مجاز است');
+    if (file.size > 5 * 1024 * 1024) return toast.error('حجم عکس حداکثر ۵ مگابایت');
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
+
+  const clearImage = () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  const sendImage = async () => {
+    if (!imageFile || sending) return;
+    setSending(true);
+    const caption = text.trim();
+    try {
+      const fd = new FormData();
+      fd.append('image', imageFile);
+      if (caption) fd.set('text', caption);
+      const res = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/images`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: fd,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'خطا در ارسال عکس');
+      setMessages((prev) => (prev.some((p) => p._id === data.message._id) ? prev : [...prev, data.message]));
+      setText('');
+      clearImage();
+      setTimeout(scrollDown, 50);
+      onActivity?.();
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
   /* ---------- ارسال پیام (سوکت با fallback به REST) ---------- */
   const send = async (e) => {
     e?.preventDefault();
+    if (imageFile) return sendImage(); // عکس (با کپشن اختیاری)
     const body = text.trim();
     if (!body || sending) return;
     setSending(true);
@@ -395,7 +444,22 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
                       : 'rounded-br-md border border-gray-100 bg-white text-gray-800'
                   }`}
                 >
-                  <p className="whitespace-pre-line break-words">{m.text}</p>
+                  {m.image && (
+                    <button
+                      type="button"
+                      onClick={() => setLightbox(imgUrl(m.image))}
+                      className="mb-1 block overflow-hidden rounded-xl"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imgUrl(m.image)}
+                        alt="عکس پیوست"
+                        loading="lazy"
+                        className="max-h-64 w-full min-w-40 object-cover transition hover:opacity-90"
+                      />
+                    </button>
+                  )}
+                  {m.text && <p className="whitespace-pre-line break-words">{m.text}</p>}
                   <p className={`mt-1 flex items-center gap-1 text-[9px] ${mine ? 'text-white/70' : 'text-gray-300'}`}>
                     {new Date(m.createdAt).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}
                     {mine && <span>{m.read ? '✓✓' : '✓'}</span>}
@@ -421,8 +485,27 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
         <div ref={bottomRef} />
       </div>
 
+      {/* پیش‌نمایش عکس انتخاب‌شده */}
+      {imagePreview && (
+        <div className="flex items-center gap-3 border-t border-gray-100 bg-white px-4 pt-3">
+          <div className="relative">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={imagePreview} alt="" className="h-16 w-16 rounded-xl border border-gray-200 object-cover" />
+            <button
+              type="button"
+              onClick={clearImage}
+              className="absolute -left-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white shadow"
+              aria-label="حذف عکس"
+            >
+              ✕
+            </button>
+          </div>
+          <p className="text-xs text-gray-400">عکس آماده ارسال — می‌توانید کپشن بنویسید</p>
+        </div>
+      )}
+
       {/* پاسخ‌های آماده — فقط وقتی هنوز چیزی ننوشته */}
-      {!text && (
+      {!text && !imagePreview && (
         <div className="flex gap-2 overflow-x-auto border-t border-gray-50 bg-white px-4 pt-2.5">
           {(conv.role === 'seller'
             ? ['سلام، بله موجود است', 'مقطع است', 'فردا می‌توانید ببینید', 'تخفیف جزئی دارد']
@@ -442,6 +525,15 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
 
       {/* ورودی پیام */}
       <form onSubmit={send} className="flex items-end gap-2 bg-white px-4 py-3">
+        <label
+          className="flex h-11 w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-full border border-gray-200 text-gray-400 transition hover:border-brand hover:text-brand"
+          title="ارسال عکس"
+        >
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.6"/><path d="m21 15-4.2-4.2a1.5 1.5 0 0 0-2.1 0L7 18"/>
+          </svg>
+          <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={pickImage} />
+        </label>
         <textarea
           value={text}
           onChange={(e) => {
@@ -458,12 +550,12 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
             }
           }}
           rows={1}
-          placeholder="پیام خود را بنویسید..."
+          placeholder={imageFile ? 'کپشن (اختیاری)...' : 'پیام خود را بنویسید...'}
           className="max-h-32 flex-1 resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-6 outline-none transition focus:border-brand focus:bg-white"
         />
         <button
           type="submit"
-          disabled={!text.trim() || sending}
+          disabled={(!text.trim() && !imageFile) || sending}
           className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white shadow-md transition hover:scale-105 hover:bg-brand-dark disabled:opacity-40 disabled:hover:scale-100"
           aria-label="ارسال"
         >
@@ -476,6 +568,37 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
           )}
         </button>
       </form>
+
+      {/* لایت‌باکس عکس */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 p-4"
+          onClick={() => setLightbox(null)}
+        >
+          <button
+            className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl text-white backdrop-blur transition hover:bg-white/20"
+            aria-label="بستن"
+          >
+            ✕
+          </button>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={lightbox}
+            alt="عکس"
+            className="dialog-in max-h-[88vh] max-w-full rounded-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <a
+            href={lightbox}
+            target="_blank"
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="absolute bottom-6 rounded-full bg-white/10 px-5 py-2.5 text-sm text-white backdrop-blur transition hover:bg-white/20"
+          >
+            باز کردن در اندازه کامل ↗
+          </a>
+        </div>
+      )}
     </div>
   );
 }

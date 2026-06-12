@@ -18,6 +18,10 @@ import { sendPushToUser } from './push.js';
 // نگهداری تعداد اتصال‌های باز هر کاربر (چند تب → یک کاربر)
 const onlineUsers = new Map(); // userId -> Set<socketId>
 
+// دسترسی سراسری به io و وضعیت آنلاین (برای روت‌های REST مثل آپلود عکس چت)
+export let ioInstance = null;
+export const isUserOnline = (userId) => onlineUsers.has(String(userId));
+
 export function initSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: {
@@ -166,5 +170,6 @@ export function initSocket(httpServer) {
     });
   });
 
+  ioInstance = io;
   return io;
 }

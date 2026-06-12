@@ -4,7 +4,9 @@ import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import Ad from '../models/Ad.js';
 import { requireAuth } from '../middleware/auth.js';
+import { upload } from '../middleware/upload.js';
 import { sendPushToUser } from '../push.js';
+import { ioInstance, isUserOnline } from '../socket.js';
 
 const router = Router();
 router.use(requireAuth); // همهٔ مسیرهای چت نیاز به ورود دارند
@@ -130,7 +132,55 @@ router.get('/conversations/:id/messages', async (req, res, next) => {
   }
 });
 
-// ارسال پیام
+/**
+ * منطق مشترک ثبت پیام (متن و/یا عکس) + بروزرسانی گفتگو + رویدادهای real-time و push
+ */
+async function createMessage({ conv, user, text = '', image = '' }) {
+  const msg = await Message.create({
+    conversation: conv._id,
+    sender: user._id,
+    text,
+    image,
+  });
+
+  conv.lastMessage = text ? text.slice(0, 100) : '📷 عکس';
+  conv.lastMessageAt = new Date();
+  conv.lastSender = user._id;
+  const iAmSeller = conv.seller.equals(user._id);
+  if (iAmSeller) conv.unreadBuyer += 1;
+  else conv.unreadSeller += 1;
+  await conv.save();
+
+  const plain = msg.toObject();
+  const convId = String(conv._id);
+  const otherId = String(iAmSeller ? conv.buyer : conv.seller);
+
+  // ⚡ real-time به روم گفتگو و نوتیف سراسری گیرنده
+  if (ioInstance) {
+    ioInstance.to(`conv:${convId}`).emit('msg:new', { convId, message: plain });
+    ioInstance.to(`user:${otherId}`).emit('msg:notify', {
+      convId,
+      message: plain,
+      adId: String(conv.ad),
+    });
+  }
+
+  // 📲 Web Push اگر گیرنده آفلاین است
+  if (!isUserOnline(otherId)) {
+    const ad = await Ad.findById(conv.ad).select('title').lean();
+    sendPushToUser(otherId, {
+      title: `پیام جدید از ${user.name || 'کاربر نردبان'}`,
+      body: text ? (text.length > 80 ? text.slice(0, 80) + '…' : text) : '📷 یک عکس فرستاد',
+      tag: `conv-${convId}`,
+      url: `/chat?c=${convId}`,
+      adTitle: ad?.title || '',
+    }).catch(() => {});
+  }
+
+  return plain;
+}
+
+// ارسال پیام متنی
 router.post('/conversations/:id/messages', async (req, res, next) => {
   try {
     const text = (req.body.text || '').trim();
@@ -142,36 +192,39 @@ router.post('/conversations/:id/messages', async (req, res, next) => {
     if (!isMember(conv, req.user._id))
       return res.status(403).json({ message: 'دسترسی ندارید' });
 
-    const msg = await Message.create({
-      conversation: conv._id,
-      sender: req.user._id,
-      text,
-    });
-
-    conv.lastMessage = text.slice(0, 100);
-    conv.lastMessageAt = new Date();
-    conv.lastSender = req.user._id;
-    const iAmSeller = conv.seller.equals(req.user._id);
-    if (iAmSeller) conv.unreadBuyer += 1;
-    else conv.unreadSeller += 1;
-    await conv.save();
-
-    // 📲 Web Push برای گیرنده (مسیر REST — مثلاً وقتی سوکت فرستنده قطع بوده)
-    const otherId = iAmSeller ? conv.buyer : conv.seller;
-    const ad = await Ad.findById(conv.ad).select('title').lean();
-    sendPushToUser(otherId, {
-      title: `پیام جدید از ${req.user.name || 'کاربر نردبان'}`,
-      body: text.length > 80 ? text.slice(0, 80) + '…' : text,
-      tag: `conv-${conv._id}`,
-      url: `/chat?c=${conv._id}`,
-      adTitle: ad?.title || '',
-    }).catch(() => {});
-
-    res.status(201).json({ message: msg });
+    const message = await createMessage({ conv, user: req.user, text });
+    res.status(201).json({ message });
   } catch (err) {
     next(err);
   }
 });
+
+// 📷 ارسال عکس (با کپشن اختیاری) — multipart: image + text?
+router.post(
+  '/conversations/:id/images',
+  upload.single('image'),
+  async (req, res, next) => {
+    try {
+      if (!req.file) return res.status(400).json({ message: 'عکسی انتخاب نشده است' });
+
+      const conv = await Conversation.findById(req.params.id);
+      if (!conv) return res.status(404).json({ message: 'گفتگو یافت نشد' });
+      if (!isMember(conv, req.user._id))
+        return res.status(403).json({ message: 'دسترسی ندارید' });
+
+      const text = (req.body.text || '').trim().slice(0, 2000);
+      const message = await createMessage({
+        conv,
+        user: req.user,
+        text,
+        image: `/uploads/${req.file.filename}`,
+      });
+      res.status(201).json({ message });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 // لیست گفتگوهای یک آگهی خاص — فقط برای صاحب آگهی (فروشنده)
 router.get('/ad/:adId/conversations', async (req, res, next) => {
