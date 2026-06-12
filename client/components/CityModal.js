@@ -56,9 +56,10 @@ export default function CityModal({ open, onClose, selected = [], onApply }) {
     ).slice(0, 30);
   }, [query]);
 
-  if (!open) return null;
+  if (!open || typeof document === 'undefined') return null;
 
-  return (
+  // Portal روی body — وگرنه backdrop-blur هدر، position:fixed را خراب می‌کند
+  return createPortal(
     <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true">
       {/* پس‌زمینه */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
@@ -212,7 +213,8 @@ export default function CityModal({ open, onClose, selected = [], onApply }) {
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

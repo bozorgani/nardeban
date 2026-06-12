@@ -3,6 +3,49 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/AuthContext';
+import { usePush } from '../../lib/usePush';
+
+function PushToggle({ user }) {
+  const { supported, permission, subscribed, loading, enable, disable } = usePush(user);
+
+  if (!supported) return null;
+
+  const toggle = async () => {
+    const res = subscribed ? await disable() : await enable();
+    if (res?.error) alert(res.error);
+  };
+
+  return (
+    <div className="flex items-center gap-4 px-5 py-4">
+      <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-xl">🔔</span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-base font-bold text-gray-800">نوتیفیکیشن پیام‌ها</span>
+        <span className="block truncate text-sm text-gray-400">
+          {permission === 'denied'
+            ? 'در تنظیمات مرورگر مسدود شده است'
+            : subscribed
+              ? 'فعال — پیام جدید چت اطلاع داده می‌شود'
+              : 'با فعال‌سازی، پیام‌های چت را از دست نمی‌دهید'}
+        </span>
+      </span>
+      <button
+        onClick={toggle}
+        disabled={loading || permission === 'denied'}
+        role="switch"
+        aria-checked={subscribed}
+        className={`relative h-7 w-12 flex-shrink-0 rounded-full transition disabled:opacity-40 ${
+          subscribed ? 'bg-brand' : 'bg-gray-300'
+        }`}
+      >
+        <span
+          className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition-all ${
+            subscribed ? 'left-1' : 'left-6'
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
 
 const Item = ({ href, icon, title, desc }) => (
   <Link
@@ -61,6 +104,7 @@ export default function MePage() {
         <Item href="/chat" icon="💬" title="چت و تماس" desc="گفتگو با خریداران و فروشندگان" />
         <Item href="/favorites" icon="❤️" title="نشان‌شده‌ها" desc="آگهی‌هایی که ذخیره کرده‌اید" />
         <Item href="/new" icon="➕" title="ثبت آگهی جدید" desc="در ۵ مرحلهٔ ساده" />
+        <PushToggle user={user} />
       </div>
 
       <button

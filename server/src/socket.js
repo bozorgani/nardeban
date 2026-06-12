@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import Conversation from './models/Conversation.js';
 import Message from './models/Message.js';
 import User from './models/User.js';
+import Ad from './models/Ad.js';
+import { sendPushToUser } from './push.js';
 
 /**
  * معماری Real-time چت:
@@ -106,6 +108,21 @@ export function initSocket(httpServer) {
           message: plain,
           adId: String(conv.ad),
         });
+
+        // 📲 اگر گیرنده هیچ اتصال سوکت بازی ندارد (آفلاین/تب بسته) → Web Push
+        if (!onlineUsers.has(otherId)) {
+          const [sender, ad] = await Promise.all([
+            User.findById(uid).select('name').lean(),
+            Ad.findById(conv.ad).select('title').lean(),
+          ]);
+          sendPushToUser(otherId, {
+            title: `پیام جدید از ${sender?.name || 'کاربر نردبان'}`,
+            body: body.length > 80 ? body.slice(0, 80) + '…' : body,
+            tag: `conv-${convId}`, // پیام‌های یک گفتگو روی هم جایگزین شوند
+            url: `/chat?c=${convId}`,
+            adTitle: ad?.title || '',
+          }).catch(() => {});
+        }
 
         ack?.({ ok: true, message: plain });
       } catch (err) {

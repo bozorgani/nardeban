@@ -4,6 +4,7 @@ import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import Ad from '../models/Ad.js';
 import { requireAuth } from '../middleware/auth.js';
+import { sendPushToUser } from '../push.js';
 
 const router = Router();
 router.use(requireAuth); // همهٔ مسیرهای چت نیاز به ورود دارند
@@ -146,9 +147,21 @@ router.post('/conversations/:id/messages', async (req, res, next) => {
     conv.lastMessage = text.slice(0, 100);
     conv.lastMessageAt = new Date();
     conv.lastSender = req.user._id;
-    if (conv.seller.equals(req.user._id)) conv.unreadBuyer += 1;
+    const iAmSeller = conv.seller.equals(req.user._id);
+    if (iAmSeller) conv.unreadBuyer += 1;
     else conv.unreadSeller += 1;
     await conv.save();
+
+    // 📲 Web Push برای گیرنده (مسیر REST — مثلاً وقتی سوکت فرستنده قطع بوده)
+    const otherId = iAmSeller ? conv.buyer : conv.seller;
+    const ad = await Ad.findById(conv.ad).select('title').lean();
+    sendPushToUser(otherId, {
+      title: `پیام جدید از ${req.user.name || 'کاربر نردبان'}`,
+      body: text.length > 80 ? text.slice(0, 80) + '…' : text,
+      tag: `conv-${conv._id}`,
+      url: `/chat?c=${conv._id}`,
+      adTitle: ad?.title || '',
+    }).catch(() => {});
 
     res.status(201).json({ message: msg });
   } catch (err) {

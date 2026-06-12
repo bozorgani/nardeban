@@ -53,6 +53,52 @@ self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
+/* ---------- 📲 Web Push: نمایش نوتیفیکیشن چت ---------- */
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    data = { title: 'نردبان', body: event.data ? event.data.text() : '' };
+  }
+
+  const title = data.title || 'نردبان';
+  const options = {
+    body: data.adTitle ? `${data.body}\n📦 ${data.adTitle}` : data.body || '',
+    icon: '/icons/icon-192.png',
+    badge: '/icons/icon-96.png',
+    tag: data.tag || 'nardeban', // پیام‌های یک گفتگو روی هم جایگزین می‌شوند
+    renotify: true,
+    dir: 'rtl',
+    lang: 'fa',
+    data: { url: data.url || '/chat' },
+    vibrate: [80, 40, 80],
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+/* ---------- کلیک روی نوتیف: باز کردن/فوکس همان گفتگو ---------- */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/chat';
+
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+      // اگر تب باز داریم، فوکس و ناوبری
+      for (const client of clients) {
+        if (new URL(client.url).origin === self.location.origin) {
+          client.focus();
+          if ('navigate' in client) return client.navigate(url);
+          return client.postMessage({ type: 'NAVIGATE', url });
+        }
+      }
+      // وگرنه پنجره جدید
+      return self.clients.openWindow(url);
+    })
+  );
+});
+
 /* ---------- محدودسازی تعداد آیتم‌های کش عکس ---------- */
 async function trimCache(name, max) {
   const cache = await caches.open(name);

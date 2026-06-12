@@ -32,8 +32,31 @@ export default function CategorySidebar({ tree = [] }) {
 
   return (
     <aside className="space-y-6 text-sm lg:border-l lg:border-gray-100 lg:pl-5">
-      {/* دسته‌ها — سبک دیوار: لیست متنی ساده */}
-      <div>
+      {/* موبایل: چیپ‌های افقی دسته‌ها + لینک صفحه کامل دسته‌بندی */}
+      <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 md:hidden">
+        <a
+          href="/categories"
+          className="flex flex-shrink-0 items-center gap-1.5 rounded-full border border-brand bg-brand-light px-3.5 py-2 text-xs font-bold text-brand"
+        >
+          🗂️ همهٔ دسته‌ها
+        </a>
+        {tree.map((p) => (
+          <button
+            key={p._id}
+            onClick={() => pickCategory(active === p.slug ? '' : p.slug)}
+            className={`flex-shrink-0 rounded-full border px-3.5 py-2 text-xs transition ${
+              active === p.slug || p.children?.some((c) => c.slug === active)
+                ? 'border-brand bg-brand font-bold text-white'
+                : 'border-gray-200 bg-white text-gray-600'
+            }`}
+          >
+            {p.icon} {p.name}
+          </button>
+        ))}
+      </div>
+
+      {/* دسکتاپ: دسته‌ها — سبک دیوار: لیست متنی ساده */}
+      <div className="hidden md:block">
         <h2 className="mb-3 text-xs font-bold text-gray-400">دسته‌ها</h2>
         <ul className="space-y-0.5">
           <li>
