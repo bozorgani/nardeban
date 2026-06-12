@@ -161,16 +161,55 @@ router.post('/', requireAuth, upload.array('images', 5), async (req, res, next) 
   }
 });
 
-// ویرایش وضعیت/حذف — فقط مالک
-router.patch('/:id', requireAuth, async (req, res, next) => {
+// ویرایش کامل آگهی — فقط مالک (همه فیلدها + مدیریت عکس‌ها)
+router.patch('/:id', requireAuth, upload.array('images', 5), async (req, res, next) => {
   try {
     const ad = await Ad.findById(req.params.id);
     if (!ad) return res.status(404).json({ message: 'آگهی یافت نشد' });
     if (!ad.owner.equals(req.user._id))
       return res.status(403).json({ message: 'دسترسی ندارید' });
 
-    const allowed = ['title', 'description', 'price', 'status', 'city', 'neighborhood'];
+    // فیلدهای متنی ساده
+    const allowed = [
+      'title', 'description', 'status', 'city', 'neighborhood',
+      'condition', 'itemType', 'model', 'features', 'contactPhone',
+    ];
     for (const key of allowed) if (req.body[key] !== undefined) ad[key] = req.body[key];
+
+    // قیمت / رایگان
+    if (req.body.isFree !== undefined) ad.isFree = String(req.body.isFree) === 'true';
+    if (req.body.price !== undefined)
+      ad.price = ad.isFree ? 0 : Number(req.body.price) || 0;
+
+    // دسته‌بندی و راه‌های تماس
+    if (req.body.category && mongoose.isValidObjectId(req.body.category))
+      ad.category = req.body.category;
+    if (req.body.chatEnabled !== undefined)
+      ad.chatEnabled = String(req.body.chatEnabled) !== 'false';
+    if (req.body.callEnabled !== undefined)
+      ad.callEnabled = String(req.body.callEnabled) !== 'false';
+
+    // موقعیت
+    if (req.body.lat !== undefined && req.body.lng !== undefined) {
+      ad.location = {
+        lat: req.body.lat ? Number(req.body.lat) : null,
+        lng: req.body.lng ? Number(req.body.lng) : null,
+      };
+    }
+
+    // مدیریت عکس‌ها:
+    //  keepImages = JSON آرایه‌ای از مسیرهای قبلی که باید بمانند (به همان ترتیب — اولی = اصلی)
+    //  فایل‌های جدید آپلودی به انتها اضافه می‌شوند (سقف ۵)
+    const added = (req.files || []).map((f) => `/uploads/${f.filename}`);
+    if (req.body.keepImages !== undefined) {
+      let keep = [];
+      try { keep = JSON.parse(req.body.keepImages); } catch { keep = []; }
+      keep = Array.isArray(keep) ? keep.filter((p) => ad.images.includes(p)) : [];
+      ad.images = [...keep, ...added].slice(0, 5);
+    } else if (added.length) {
+      ad.images = [...ad.images, ...added].slice(0, 5);
+    }
+
     await ad.save();
     res.json({ ad });
   } catch (err) {

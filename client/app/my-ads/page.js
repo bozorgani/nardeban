@@ -169,6 +169,12 @@ export default function MyAdsPage() {
                     <option value="hidden">⚪ مخفی</option>
                   </select>
                   <Link
+                    href={`/my-ads/edit/${ad._id}`}
+                    className="rounded-xl bg-gray-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-gray-700"
+                  >
+                    ✏️ ویرایش
+                  </Link>
+                  <Link
                     href={`/ads/${ad._id}`}
                     className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition hover:border-gray-300"
                   >

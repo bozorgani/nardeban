@@ -11,6 +11,8 @@ import { useSocket } from '../../lib/useSocket';
 /*  لیست گفتگوها (ستون راست)                                          */
 /* ------------------------------------------------------------------ */
 function ConversationList({ conversations, activeId, onPick, onlineMap }) {
+  const [filter, setFilter] = useState('');
+
   if (!conversations.length) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
@@ -23,9 +25,39 @@ function ConversationList({ conversations, activeId, onPick, onlineMap }) {
     );
   }
 
+  const q = filter.trim();
+  const shown = q
+    ? conversations.filter(
+        (c) =>
+          (c.other?.name || '').includes(q) ||
+          (c.ad?.title || '').includes(q) ||
+          (c.lastMessage || '').includes(q)
+      )
+    : conversations;
+
   return (
-    <ul className="divide-y divide-gray-50">
-      {conversations.map((c) => {
+    <>
+      {/* جستجو در گفتگوها */}
+      <div className="sticky top-0 z-10 border-b border-gray-100 bg-white p-3">
+        <div className="relative">
+          <input
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            placeholder="جستجو در گفتگوها..."
+            className="w-full rounded-xl border border-gray-100 bg-gray-50 py-2 pr-9 pl-3 text-xs outline-none transition focus:border-brand focus:bg-white"
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          </span>
+        </div>
+      </div>
+
+      {shown.length === 0 && (
+        <p className="py-8 text-center text-xs text-gray-400">گفتگویی با «{q}» پیدا نشد</p>
+      )}
+
+      <ul className="divide-y divide-gray-50">
+      {shown.map((c) => {
         const online = onlineMap[String(c.other?._id)];
         return (
           <li key={c._id}>
@@ -78,7 +110,8 @@ function ConversationList({ conversations, activeId, onPick, onlineMap }) {
           </li>
         );
       })}
-    </ul>
+      </ul>
+    </>
   );
 }
 
@@ -386,14 +419,39 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
         <div ref={bottomRef} />
       </div>
 
+      {/* پاسخ‌های آماده — فقط وقتی هنوز چیزی ننوشته */}
+      {!text && (
+        <div className="flex gap-2 overflow-x-auto border-t border-gray-50 bg-white px-4 pt-2.5">
+          {(conv.role === 'seller'
+            ? ['سلام، بله موجود است', 'مقطع است', 'فردا می‌توانید ببینید', 'تخفیف جزئی دارد']
+            : ['سلام، هنوز موجوده؟', 'قیمت آخر چنده؟', 'تخفیف هم می‌دید؟', 'کی می‌تونم ببینمش؟']
+          ).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => { handleTyping(s); }}
+              className="flex-shrink-0 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-[11px] text-gray-600 transition hover:border-brand hover:text-brand"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ورودی پیام */}
-      <form onSubmit={send} className="flex items-end gap-2 border-t border-gray-100 bg-white px-4 py-3">
+      <form onSubmit={send} className="flex items-end gap-2 bg-white px-4 py-3">
         <textarea
           value={text}
-          onChange={(e) => handleTyping(e.target.value)}
+          onChange={(e) => {
+            handleTyping(e.target.value);
+            // ارتفاع خودکار
+            e.target.style.height = 'auto';
+            e.target.style.height = Math.min(e.target.scrollHeight, 128) + 'px';
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
+              e.target.style.height = 'auto';
               send();
             }
           }}
@@ -404,12 +462,16 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
         <button
           type="submit"
           disabled={!text.trim() || sending}
-          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white shadow-md transition hover:bg-brand-dark disabled:opacity-40"
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-brand text-white shadow-md transition hover:scale-105 hover:bg-brand-dark disabled:opacity-40 disabled:hover:scale-100"
           aria-label="ارسال"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(180deg)' }}>
-            <path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z" />
-          </svg>
+          {sending ? (
+            <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 1 1-6.2-8.56" strokeLinecap="round"/></svg>
+          ) : (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ transform: 'rotate(180deg)' }}>
+              <path d="M2.01 21 23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          )}
         </button>
       </form>
     </div>
