@@ -27,6 +27,45 @@ async function getAd(id) {
   }
 }
 
+// متادیتای پویا برای SEO — عنوان و توضیحات هر آگهی به‌صورت اختصاصی
+// (فقط آگهی‌های فعال؛ pending/rejected برای دیگران 404 می‌شوند)
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  try {
+    const res = await fetch(`${API}/api/ads/${id}`, { cache: 'no-store' });
+    if (!res.ok) return { title: 'آگهی یافت نشد | نردبان' };
+    const { ad } = await res.json();
+    if (!ad) return { title: 'آگهی یافت نشد | نردبان' };
+
+    const priceText = ad.isFree
+      ? 'رایگان'
+      : ad.price
+        ? `${Number(ad.price).toLocaleString('fa-IR')} تومان`
+        : 'توافقی';
+
+    const title = `${ad.title} — ${priceText} | نردبان`;
+    const description = `${ad.title} در ${ad.city}${ad.neighborhood ? `، ${ad.neighborhood}` : ''} — ${priceText}. ${ad.description?.slice(0, 140) || ''}`;
+
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        type: 'article',
+        images: ad.images?.length ? [{ url: `${API}${ad.images[0]}` }] : undefined,
+      },
+      twitter: {
+        card: 'summary_large_image',
+        title,
+        description,
+      },
+    };
+  } catch {
+    return { title: 'نردبان | نیازمندی‌های رایگان' };
+  }
+}
+
 function Row({ label, children, last = false }) {
   return (
     <div className={`flex items-center justify-between py-3.5 ${last ? '' : 'border-b border-gray-100'}`}>

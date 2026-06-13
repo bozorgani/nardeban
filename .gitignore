@@ -2,8 +2,6 @@ node_modules/
 .next/
 .env
 .env.local
-server/uploads/*
-!server/uploads/.gitkeep
 shots/
 client/backend/uploads/*
 !client/backend/uploads/.gitkeep
