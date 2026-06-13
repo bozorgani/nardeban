@@ -24,9 +24,13 @@ const nextConfig = {
 
   images: {
     remotePatterns: [
-      { protocol: 'http', hostname: 'localhost', port: '4000', pathname: '/uploads/**' },
+      // حالت یکپارچه: عکس‌ها روی همان origin (پورت ۳۰۰۰) سرو می‌شوند
+      { protocol: 'http', hostname: 'localhost', port: '3000', pathname: '/uploads/**' },
+      { protocol: 'http', hostname: '127.0.0.1', port: '3000', pathname: '/uploads/**' },
       // عکس‌ها وقتی سایت با IP شبکه باز شده
-      { protocol: 'http', hostname: '192.168.*.*', port: '4000', pathname: '/uploads/**' },
+      { protocol: 'http', hostname: '192.168.*.*', port: '3000', pathname: '/uploads/**' },
+      // سازگاری: اگر کسی هنوز بک‌اند جدا روی ۴۰۰۰ دارد
+      { protocol: 'http', hostname: 'localhost', port: '4000', pathname: '/uploads/**' },
     ],
   },
 };

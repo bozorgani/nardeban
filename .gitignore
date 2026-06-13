@@ -5,3 +5,5 @@ node_modules/
 server/uploads/*
 !server/uploads/.gitkeep
 shots/
+client/backend/uploads/*
+!client/backend/uploads/.gitkeep

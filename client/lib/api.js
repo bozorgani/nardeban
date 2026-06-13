@@ -1,29 +1,26 @@
 /**
  * آدرس API:
- *  - سمت سرور (SSR): از env یا localhost
- *  - سمت مرورگر: اگر env تنظیم نشده یا localhost است ولی سایت با IP باز شده،
- *    خودکار از همان hostname صفحه استفاده می‌شود (مثلاً http://192.168.1.17:4000)
- *    → دسترسی از گوشی/شبکه بدون هیچ تنظیمی کار می‌کند.
+ *
+ * از آنجا که بک‌اند حالا «داخل» همین اپ Next.js اجرا می‌شود (custom server)،
+ * API روی همان مبدأ (origin) صفحات قرار دارد:
+ *  - سمت مرورگر: خالی (نسبی) → fetch به /api/... می‌رود (همان origin)
+ *  - سمت سرور (SSR): آدرس مطلق localhost روی همان پورت پروسه
+ *
+ * اگر پروژه را جدا کردید (بک‌اند روی پورت دیگر)، متغیر NEXT_PUBLIC_API_URL
+ * را در .env.local تنظیم کنید تا این مقدار بازنویسی شود.
  */
 function resolveApiUrl() {
-  const envUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
-  if (typeof window === 'undefined') return envUrl;
+  // حالت جدا (legacy / production توزیع‌شده): اگر API_URL صریحاً داده شده از آن استفاده کن
+  const explicit = process.env.NEXT_PUBLIC_API_URL;
+  if (explicit) return explicit;
 
-  const pageHost = window.location.hostname;
-  try {
-    const env = new URL(envUrl);
-    // اگر env به localhost اشاره دارد ولی صفحه از host دیگری باز شده → جایگزینی hostname
-    if (
-      (env.hostname === 'localhost' || env.hostname === '127.0.0.1') &&
-      pageHost !== 'localhost' &&
-      pageHost !== '127.0.0.1'
-    ) {
-      return `${window.location.protocol}//${pageHost}:${env.port || 4000}`;
-    }
-  } catch {
-    /* ignore */
+  if (typeof window === 'undefined') {
+    // SSR داخل همان پروسه → API روی همین پورت
+    const port = process.env.PORT || 3000;
+    return `http://localhost:${port}`;
   }
-  return envUrl;
+  // مرورگر → همان origin (نسبی)
+  return '';
 }
 
 export const API_URL = resolveApiUrl();
@@ -53,7 +50,10 @@ export async function api(path, { method = 'GET', body, isForm = false } = {}) {
 
 export function imgUrl(path) {
   if (!path) return null;
-  return path.startsWith('http') ? path : `${API_URL}${path}`;
+  if (path.startsWith('http')) return path;
+  // حالت یکپارچه: عکس‌ها روی همان origin سرو می‌شوند (/uploads/...)
+  // API_URL در مرورگر خالی است (نسبی) و در SSR مطلق.
+  return `${API_URL}${path}`;
 }
 
 export function formatPrice(ad) {
