@@ -76,3 +76,67 @@ input[type='number']::-webkit-outer-spin-button {
   to { opacity: 1; transform: none; }
 }
 .dialog-in { animation: dialogIn 0.22s cubic-bezier(0.21, 1.02, 0.73, 1) both; }
+
+/* ================================================================== */
+/*  🌙 حالت تاریک (Dark Mode)                                          */
+/*  پالت اپ کاملاً مبتنی بر کلاس‌های Tailwind (bg-/text-/border-gray)   */
+/*  است؛ این قواعد در دامنه‌ی .dark آن‌ها را به پشت‌زمینه تاریک نگاشت     */
+/*  می‌کنند. چون خارج از هر @layer نوشته شده‌اند، بر utility‌های          */
+/*  لایه‌بندی‌شده‌ی Tailwind v4 (که همیشه اولویت کمتری دارند) غلبه می‌کنند */
+/*  — بدون نیاز به !important.                                         */
+/*  توضیح انتخاب: bg-gray-900/bg-gray-700 عمداً دست‌نخورده می‌مانند،     */
+/*  چون به‌عنوان اکسنت تیره (تصویرِ بدون‌عکس، tooltip، تب فعال) عمداً     */
+/*  تیره‌اند و باید تیره بمانند.                                        */
+/* ================================================================== */
+
+.dark { color-scheme: dark; }
+
+.dark body {
+  background: #0e1626;
+  color: #e2e8f0;
+}
+
+/* — سطوح و پس‌زمینه‌ها — */
+.dark .bg-white { background-color: #161f30; }
+.dark .bg-white\/95,
+.dark .bg-white\/90 { background-color: rgba(14, 22, 38, 0.9); }
+.dark .bg-gray-50 { background-color: #1b2538; }
+.dark .bg-gray-100 { background-color: #202b40; }
+.dark .bg-gray-200 { background-color: #283449; }
+.dark .bg-gray-300 { background-color: #334155; }
+/* bg-gray-700 و bg-gray-900 → بدون تغییر (اکسنت تیره) */
+
+/* — متن — */
+.dark .text-gray-900 { color: #f1f5f9; }
+.dark .text-gray-800 { color: #e2e8f0; }
+.dark .text-gray-700 { color: #cbd5e1; }
+.dark .text-gray-600 { color: #b0bcca; }
+.dark .text-gray-500 { color: #94a3b8; }
+.dark .text-gray-400 { color: #7c8aa0; }
+.dark .text-gray-300 { color: #5b6b82; }
+.dark .text-gray-200 { color: #46576d; }
+
+/* — حاشیه‌ها — */
+.dark .border-gray-50 { border-color: #1f2937; }
+.dark .border-gray-100 { border-color: #243044; }
+.dark .border-gray-200 { border-color: #2c384e; }
+.dark .border-gray-300 { border-color: #3a485f; }
+.dark .border-gray-400 { border-color: #4b5a72; }
+
+/* — جداکننده‌ها (divide-*) — */
+.dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]) { border-color: #1f2937; }
+.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #243044; }
+
+/* — حلقه‌ی (ring) دور دکمه‌ی اصلی در نوار پایین موبایل — */
+.dark .ring-white { --tw-ring-color: #0e1626; }
+
+/* — گرادیان «بدون‌عکس» آگهی‌ها — */
+.dark .from-gray-50 { --tw-gradient-from: #1b2538 var(--tw-gradient-from-position); }
+.dark .to-gray-200 { --tw-gradient-to: #283449 var(--tw-gradient-to-position); }
+
+/* — اسکرول‌بار — */
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+/* — متن انتخاب‌شده — */
+.dark ::selection { background: rgba(166, 38, 38, 0.45); color: #fff; }

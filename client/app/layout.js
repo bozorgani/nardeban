@@ -21,7 +21,10 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: '#a62626',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#a62626' },
+    { media: '(prefers-color-scheme: dark)', color: '#0e1626' },
+  ],
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -30,7 +33,15 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="fa" dir="rtl">
+    <html lang="fa" dir="rtl" suppressHydrationWarning>
+      <head>
+        {/* 🌙 جلوگیری از پرش تم (FOUC): پیش از رنگ‌آمیزی، تم ذخیره‌شده/سیستم اعمال می‌شود */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');var m=window.matchMedia('(prefers-color-scheme: dark)').matches;if(t==='dark'||(!t&&m)){document.documentElement.classList.add('dark')}}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body>
         <link
           rel="stylesheet"

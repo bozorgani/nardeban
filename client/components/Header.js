@@ -8,6 +8,7 @@ import { api, CITIES } from '../lib/api';
 import { useSocket } from '../lib/useSocket';
 import { cityLabel, parseCities } from '../lib/cities';
 import CityModal from './CityModal';
+import ThemeToggle from './ThemeToggle';
 
 function ChatLink() {
   const { user } = useAuth();
@@ -148,6 +149,9 @@ export default function Header() {
         <Suspense fallback={<div className="flex-1" />}>
           <SearchBar />
         </Suspense>
+
+        {/* 🌙 دکمه‌ی تغییر تم — هم در موبایل و هم دسکتاپ دیده می‌شود */}
+        <ThemeToggle className="flex shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-white p-2.5 text-gray-600 transition hover:border-gray-300 hover:text-gray-800" />
 
         {/* در موبایل ناوبری پایین جایگزین است */}
         <nav className="hidden shrink-0 items-center gap-2 md:flex">
