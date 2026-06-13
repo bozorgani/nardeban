@@ -9,7 +9,8 @@
     "dev:memory": "USE_MEMORY_MONGO=1 node server.js",
     "dev:next": "next dev",
     "build": "next build",
-    "start": "NODE_ENV=production node server.js"
+    "start": "NODE_ENV=production node server.js",
+    "seed": "node backend/src/config/seed.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

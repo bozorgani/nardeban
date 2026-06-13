@@ -1,5 +1,8 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+// بارگذاری .env.local (مثل server.js) — ترتیب: .env.local سپس .env
+dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
 import { connectDB } from './db.js';
 import Category from '../models/Category.js';
 import User from '../models/User.js';
