@@ -8,7 +8,7 @@ import Gallery from './Gallery';
 import ReportButton from '../../../components/ReportButton';
 import SimilarAds from './SimilarAds';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API = process.env.NEXT_PUBLIC_API_URL || `http://localhost:${process.env.PORT || 3000}`;
 
 async function getAd(id) {
   try {

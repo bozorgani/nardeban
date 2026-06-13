@@ -2,7 +2,7 @@ import Link from 'next/link';
 import AdCard from '../../../components/AdCard';
 import RatingSection from './RatingSection';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+const API = process.env.NEXT_PUBLIC_API_URL || `http://localhost:${process.env.PORT || 3000}`;
 
 async function getProfile(id) {
   try {
