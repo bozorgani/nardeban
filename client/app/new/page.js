@@ -27,6 +27,18 @@ const STEPS = [
 
 const CONDITIONS = ['نو', 'در حد نو', 'کارکرده', 'نیاز به تعمیر'];
 
+// سقف حجم و تعداد عکس (هم‌راستا با multer در بک‌اند — جلوگیری از خطا در ثبت نهایی)
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // ۵ مگابایت
+const MAX_FILES = 5;
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+// خوانا کردن حجم فارسی: «۴٫۸ مگابایت» / «۸۰۰ کیلوبایت»
+function humanSize(bytes) {
+  if (bytes >= 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toLocaleString('fa-IR', { maximumFractionDigits: 1 })} مگابایت`;
+  return `${Math.round(bytes / 1024).toLocaleString('fa-IR')} کیلوبایت`;
+}
+
 export default function NewAdWizard() {
   const router = useRouter();
   const toast = useToast();
@@ -75,11 +87,49 @@ export default function NewAdWizard() {
   const [mainIndex, setMainIndex] = useState(0); // ایندکس عکس اصلی
 
   const onFiles = (e) => {
-    // افزودن به عکس‌های قبلی (تا سقف ۵)
+    setError(''); // پاک‌کردن خطای قبلی
     const incoming = Array.from(e.target.files);
-    const list = [...files, ...incoming].slice(0, 5);
+
+    // --- اعتبارسنجی در همان لحظه‌ی انتخاب (جلوگیری از رسیدن به ثبت نهایی) ---
+    const accepted = [];
+    const errors = [];
+
+    for (const f of incoming) {
+      // نوع فایل
+      if (!ALLOWED_TYPES.includes(f.type)) {
+        errors.push(`«${f.name}»: فقط JPG/PNG/WebP مجاز است`);
+        continue;
+      }
+      // حجم (سقف سرور = ۵ مگابایت)
+      if (f.size > MAX_FILE_SIZE) {
+        errors.push(`«${f.name}» ${humanSize(f.size)} است — حداکثر ${humanSize(MAX_FILE_SIZE)}`);
+        continue;
+      }
+      accepted.push(f);
+    }
+
+    // سقف تعداد کل (قبلی‌ها + جدیدها)
+    const merged = [...files, ...accepted];
+    if (merged.length > MAX_FILES) {
+      const extra = merged.length - MAX_FILES;
+      errors.push(
+        `حداکثر ${MAX_FILES.toLocaleString('fa-IR')} عکس — ${extra.toLocaleString('fa-IR')} عکس اضافه نادیده گرفته شد`
+      );
+    }
+
+    // نمایش خطاها (اگر بود) به‌صورت Toast + خطای درون‌فرمی
+    if (errors.length) {
+      const msg = errors.join(' — ');
+      setError(msg);
+      toast?.error(msg, { title: 'عکس رد شد', duration: 6000 });
+    }
+
+    // ثبت عکس‌های پذیرفته‌شده
+    const list = merged.slice(0, MAX_FILES);
+    if (list.length !== files.length) {
+      previews.slice(0, files.length).forEach((p) => URL.revokeObjectURL(p));
+    }
     setFiles(list);
-    previews.forEach((p) => URL.revokeObjectURL(p));
     setPreviews(list.map((f) => URL.createObjectURL(f)));
     e.target.value = '';
   };
@@ -97,6 +147,12 @@ export default function NewAdWizard() {
       case 1:
         if (title.trim().length < 5) return 'عنوان باید حداقل ۵ حرف باشد';
         if (description.trim().length < 10) return 'توضیحات باید حداقل ۱۰ حرف باشد';
+        // خط دفاعی: اگر عکسِ بیش‌ازحد بزرگی مانده، نگذارد برود جلو
+        const oversized = files.find((f) => f.size > MAX_FILE_SIZE);
+        if (oversized)
+          return `عکس «${oversized.name}» ${humanSize(oversized.size)} است — حداکثر ${humanSize(MAX_FILE_SIZE)}. آن را حذف یا کوچک کنید.`;
+        const wrongType = files.find((f) => !ALLOWED_TYPES.includes(f.type));
+        if (wrongType) return `فرمت عکس «${wrongType.name}» مجاز نیست (فقط JPG/PNG/WebP).`;
         return '';
       case 2:
         if (!currentCat) return 'یک دسته‌بندی انتخاب کنید';
@@ -233,26 +289,36 @@ export default function NewAdWizard() {
                   <span className="text-[10px]">افزودن عکس</span>
                   <input type="file" accept="image/jpeg,image/png,image/webp" multiple hidden onChange={onFiles} />
                 </label>
-                {previews.map((src, i) => (
+                {previews.map((src, i) => {
+                  const f = files[i];
+                  const tooBig = f && f.size > MAX_FILE_SIZE;
+                  return (
                   <div key={src} className="relative h-24 w-24">
                     <button
                       type="button"
                       onClick={() => setMainIndex(i)}
-                      title="انتخاب به عنوان عکس اصلی"
+                      title={tooBig ? `حجم زیاد: ${humanSize(f.size)} — باید حذف شود` : 'انتخاب به عنوان عکس اصلی'}
                       className={`block h-full w-full overflow-hidden rounded-xl border-2 transition ${
-                        i === mainIndex ? 'border-brand ring-2 ring-brand/30' : 'border-gray-200 hover:border-gray-400'
+                        tooBig
+                          ? 'border-red-400 ring-2 ring-red-200'
+                          : i === mainIndex
+                            ? 'border-brand ring-2 ring-brand/30'
+                            : 'border-gray-200 hover:border-gray-400'
                       }`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt="" className="h-full w-full object-cover" />
+                      <img src={src} alt="" className={`h-full w-full object-cover ${tooBig ? 'opacity-50' : ''}`} />
+                      {tooBig && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="rounded-md bg-red-500/90 px-1.5 py-0.5 text-[8px] font-bold text-white shadow">
+                            ⚠️ {humanSize(f.size)}
+                          </span>
+                        </span>
+                      )}
                     </button>
-                    {i === mainIndex ? (
+                    {i === mainIndex && !tooBig && (
                       <span className="absolute bottom-1 right-1 rounded-md bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white shadow">
                         ★ عکس اصلی
-                      </span>
-                    ) : (
-                      <span className="absolute bottom-1 right-1 rounded-md bg-black/50 px-1.5 py-0.5 text-[9px] text-white opacity-0 transition hover:opacity-100">
-                        انتخاب
                       </span>
                     )}
                     <button
@@ -263,10 +329,11 @@ export default function NewAdWizard() {
                       ✕
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
               <p className="mt-2 text-xs text-gray-400">
-                فرمت JPG / PNG / WebP — هر عکس حداکثر ۵ مگابایت · روی عکس بزنید تا «عکس اصلی» شود
+                فرمت JPG / PNG / WebP — هر عکس حداکثر {humanSize(MAX_FILE_SIZE)} · تا {MAX_FILES.toLocaleString('fa-IR')} عکس · روی عکس بزنید تا «عکس اصلی» شود
               </p>
             </div>
 

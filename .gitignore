@@ -5,3 +5,4 @@ node_modules/
 shots/
 client/backend/uploads/*
 !client/backend/uploads/.gitkeep
+client/.mongo-tmp/

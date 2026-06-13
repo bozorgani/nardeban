@@ -36,6 +36,21 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 async function main() {
   /* ---------- اتصال دیتابیس ---------- */
   if (process.env.USE_MEMORY_MONGO === '1') {
+    // در برخی محیط‌ها /tmp یک tmpfs کوچک است که mongod پرش می‌کند («No space
+    // left on device»). داده‌های درون‌حافظه‌ای را روی مسیر پروژه می‌نویسیم که
+    // فضای کافی دارد. فقط اگر TMPDIR از قبل تنظیم نشده باشد.
+    if (!process.env.TMPDIR) {
+      const { default: fs } = await import('fs');
+      const { default: path } = await import('path');
+      const { fileURLToPath } = await import('url');
+      const tmpdir = path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        '.mongo-tmp'
+      );
+      fs.mkdirSync(tmpdir, { recursive: true });
+      process.env.TMPDIR = tmpdir;
+    }
+
     const { MongoMemoryServer } = await import('mongodb-memory-server');
     const mongod = await MongoMemoryServer.create();
     process.env.MONGO_URI = mongod.getUri('nardeban');
