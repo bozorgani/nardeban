@@ -5,44 +5,52 @@
 ## ساختار پروژه
 
 ```
-divar-clone/
-├── server/          # بک‌اند Express + Mongoose
+nardeban/
+├── server/          # بک‌اند مستقل → deploy روی Render / Railway
 │   ├── src/
-│   │   ├── index.js           # نقطه ورود
-│   │   ├── config/db.js       # اتصال مونگو
-│   │   ├── config/seed.js     # داده اولیه (دسته‌بندی + آگهی نمونه)
-│   │   ├── models/            # User, Ad, Category
-│   │   ├── routes/            # auth, ads, categories, users
-│   │   └── middleware/        # JWT auth, Multer upload
-│   └── uploads/               # عکس‌های آپلودشده
-└── client/          # فرانت Next.js 16 App Router + Tailwind v4
-    ├── app/
-    │   ├── page.js            # صفحه اصلی (لیست + فیلتر + جستجو + صفحه‌بندی)
-    │   ├── ads/[id]/          # جزئیات آگهی (گالری، تماس، نشان)
-    │   ├── new/               # ثبت آگهی با آپلود عکس
-    │   ├── auth/              # ورود با OTP
-    │   ├── my-ads/            # مدیریت آگهی‌های من
-    │   └── favorites/         # نشان‌شده‌ها
-    ├── components/            # Header, AdCard, Sidebar, ...
-    └── lib/                   # api helper + AuthContext
+│   │   ├── index.js           # نقطه‌ی ورود (Express + Socket.io)
+│   │   ├── app.js             # فکتوری ساخت اپ Express
+│   │   ├── config/            # db, cors, seed, categories, sample-ads
+│   │   ├── models/            # User, Ad, Category, Conversation, Message, ...
+│   │   ├── routes/            # auth, ads, categories, users, chat, admin, ...
+│   │   ├── middleware/        # JWT auth, multer upload, image optimize
+│   │   └── socket.js          # چت Real-time
+│   ├── uploads/               # عکس‌های آپلودشده
+│   └── package.json
+└── client/          # فرانت مستقل → deploy روی Vercel
+    ├── app/                    # Next.js App Router
+    │   ├── page.js             # صفحه اصلی
+    │   ├── ads/[id]/           # جزئیات آگهی
+    │   ├── new/                # ثبت آگهی
+    │   ├── chat/               # چت real-time
+    │   ├── admin/              # پنل مدیریت
+    │   └── ...
+    ├── components/
+    ├── lib/                    # api helper, AuthContext, useSocket, ...
+    └── package.json
 ```
 
-## راه‌اندازی
+## توسعه‌ی محلی
 
-### پیش‌نیاز
-- Node.js 20+
-- MongoDB (لوکال یا Atlas)
+به دو ترمینال نیاز دارید:
 
-### ۱) بک‌اند
+### ۱) بک‌اند (پورت ۴۰۰۰)
+
 ```bash
 cd server
-cp .env.example .env        # مقادیر را تنظیم کنید (مخصوصاً JWT_SECRET)
+cp .env.example .env        # JWT_SECRET را تنظیم کنید
 npm install
-npm run seed                # دسته‌بندی‌ها و آگهی‌های نمونه
-npm run dev                 # http://localhost:4000
+
+# بدون نصب MongoDB (پیشنهادی برای توسعه):
+npm run dev:memory
+
+# یا با MongoDB لوکال:
+# npm run seed   # فقط اولین بار
+# npm run dev
 ```
 
-### ۲) فرانت‌اند
+### ۲) فرانت (پورت ۳۰۰۰)
+
 ```bash
 cd client
 cp .env.local.example .env.local
@@ -51,38 +59,45 @@ npm run dev                 # http://localhost:3000
 ```
 
 ## ورود (حالت دمو)
-سیستم ورود با OTP است. چون SMS واقعی متصل نیست، کد تایید در پاسخ API
-برگردانده شده و در صفحه ورود نمایش داده می‌شود.
-برای اتصال SMS واقعی (کاوه‌نگار و...) کافیست در
-`server/src/routes/auth.routes.js` بخش `request-otp` را ویرایش کنید و
-`demoCode` را از پاسخ حذف کنید.
 
-## API ها
+سیستم ورود با OTP است. کد تایید در پاسخ API برگردانده می‌شود (SMS واقعی وصل نیست).
 
-| Method | Route | توضیح |
+| نقش | شماره | کاربرد |
 |---|---|---|
-| POST | `/api/auth/request-otp` | درخواست کد تایید |
-| POST | `/api/auth/verify-otp` | تایید کد → JWT |
-| GET | `/api/auth/me` | کاربر جاری |
-| GET | `/api/ads` | لیست + فیلتر (`q, category, city, minPrice, maxPrice, sort, page`) |
-| GET | `/api/ads/:id` | جزئیات (+ شمارش بازدید) |
-| GET | `/api/ads/mine` 🔒 | آگهی‌های من |
-| POST | `/api/ads` 🔒 | ثبت آگهی (multipart، تا ۵ عکس) |
-| PATCH | `/api/ads/:id` 🔒 | ویرایش/تغییر وضعیت |
-| DELETE | `/api/ads/:id` 🔒 | حذف |
-| GET | `/api/categories` | دسته‌بندی‌ها |
-| GET/POST | `/api/users/favorites[/:adId]` 🔒 | نشان‌شده‌ها |
+| کاربر عادی | `09120000000` | ثبت آگهی، چت |
+| ادمین 👑 | `09110000000` | پنل مدیریت |
 
-## چت Real-time (Socket.io) ⚡
-چت خریدار–فروشنده کاملاً لحظه‌ای است:
-- رویدادها: `msg:new`، `msg:notify`، `typing`، `msgs:read`، `presence`
-- احراز هویت سوکت با همان JWT (handshake auth)
-- نشانگر «در حال نوشتن...»، وضعیت آنلاین/آفلاین، تیک ✓/✓✓ زنده
-- اگر سوکت قطع شود، کلاینت خودکار به polling برمی‌گردد (fallback)
-- تست: `cd client && node test-socket.mjs` (سرور باید روشن باشد)
+## 🚀 Deploy
 
-## ایده‌های توسعه بعدی
-- پنل ادمین و تایید آگهی‌ها
-- آپلود روی S3/Liara به جای دیسک
-- نقشه (نشان دادن محله روی Leaflet)
-- Rate-limit و captcha روی OTP
+### بک‌اند → Render
+
+1. در [render.com](https://render.com) یک **Web Service** جدید بسازید
+2. به این repo متصل کنید، **Root Directory = `server`**
+3. تنظیمات:
+   - **Build Command:** `npm install`
+   - **Start Command:** `npm start`
+   - **Environment Variables:**
+     ```
+     MONGO_URI=mongodb+srv://...   ← از MongoDB Atlas
+     JWT_SECRET=your-secret
+     CLIENT_ORIGIN=https://your-app.vercel.app  ← بعد از deploy فرانت
+     ```
+4. Render خودش `PORT` را تنظیم می‌کند.
+
+### فرانت → Vercel
+
+1. در [vercel.com](https://vercel.com) یک پروژه‌ی جدید بسازید
+2. به این repo متصل کنید، **Root Directory = `client`**
+3. **Environment Variables:**
+   ```
+   NEXT_PUBLIC_API_URL=https://your-app.onrender.com  ← آدرس Render
+   ```
+4. Deploy — تمام!
+
+> **نکته:** آدرس Render را در `CLIENT_ORIGIN` سرور و آدرس فرانت را در `NEXT_PUBLIC_API_URL` کلاینت بگذارید (CORS).
+
+## تکنولوژی‌ها
+
+- **فرانت:** Next.js 16, React 19, Tailwind v4, Leaflet, Socket.io-client
+- **بک‌اند:** Express, Mongoose, Socket.io, JWT, Multer, Sharp, Web Push
+- **دیتابیس:** MongoDB (Atlas در پروداکشن)

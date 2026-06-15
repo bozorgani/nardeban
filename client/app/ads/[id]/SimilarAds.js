@@ -1,6 +1,6 @@
 import AdCard from '../../../components/AdCard';
 
-const API = process.env.NEXT_PUBLIC_API_URL || `http://localhost:${process.env.PORT || 3000}`;
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 // آگهی‌های مشابه (Server Component — برای SEO هم در HTML است)
 export default async function SimilarAds({ adId }) {

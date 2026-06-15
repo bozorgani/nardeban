@@ -12,10 +12,8 @@ export function getSocket() {
   if (!sharedSocket) {
     const token = getToken();
     if (!token) return null;
-    // حالت یکپارچه: Socket.io روی همان origin صفحات (پورت ۳۰۰۰).
-    // API_URL در مرورگر خالی است → undefined → socket.io به همان origin وصل می‌شود.
-    const uri = API_URL || undefined;
-    sharedSocket = io(uri, {
+    // Socket.io به بک‌اند (Render) وصل می‌شود — همان آدرس API.
+    sharedSocket = io(API_URL, {
       auth: { token },
       transports: ['websocket', 'polling'],
       reconnectionDelay: 2000,

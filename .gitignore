@@ -3,6 +3,8 @@ node_modules/
 .env
 .env.local
 shots/
-client/backend/uploads/*
-!client/backend/uploads/.gitkeep
-client/.mongo-tmp/
+# آپلودهای بک‌اند
+server/uploads/*
+!server/uploads/.gitkeep
+# داده‌های موقت mongodb-memory-server
+server/.mongo-tmp/

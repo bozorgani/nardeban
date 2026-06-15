@@ -24,13 +24,15 @@ const nextConfig = {
 
   images: {
     remotePatterns: [
-      // حالت یکپارچه: عکس‌ها روی همان origin (پورت ۳۰۰۰) سرو می‌شوند
-      { protocol: 'http', hostname: 'localhost', port: '3000', pathname: '/uploads/**' },
-      { protocol: 'http', hostname: '127.0.0.1', port: '3000', pathname: '/uploads/**' },
-      // عکس‌ها وقتی سایت با IP شبکه باز شده
-      { protocol: 'http', hostname: '192.168.*.*', port: '3000', pathname: '/uploads/**' },
-      // سازگاری: اگر کسی هنوز بک‌اند جدا روی ۴۰۰۰ دارد
+      // توسعه‌ی محلی: بک‌اند روی localhost:4000
       { protocol: 'http', hostname: 'localhost', port: '4000', pathname: '/uploads/**' },
+      { protocol: 'http', hostname: '127.0.0.1', port: '4000', pathname: '/uploads/**' },
+      // عکس‌ها وقتی سایت با IP شبکه باز شده
+      { protocol: 'http', hostname: '192.168.*.*', port: '4000', pathname: '/uploads/**' },
+      { protocol: 'http', hostname: '10.*.*.*', port: '4000', pathname: '/uploads/**' },
+      // پروداکشن: بک‌اند روی Render (https://your-app.onrender.com)
+      { protocol: 'https', hostname: '*.onrender.com', pathname: '/uploads/**' },
+      { protocol: 'https', hostname: '*.railway.app', pathname: '/uploads/**' },
     ],
   },
 };

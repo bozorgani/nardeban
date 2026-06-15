@@ -1,26 +1,34 @@
 /**
- * آدرس API:
+ * آدرس بک‌اند (API):
  *
- * از آنجا که بک‌اند حالا «داخل» همین اپ Next.js اجرا می‌شود (custom server)،
- * API روی همان مبدأ (origin) صفحات قرار دارد:
- *  - سمت مرورگر: خالی (نسبی) → fetch به /api/... می‌رود (همان origin)
- *  - سمت سرور (SSR): آدرس مطلق localhost روی همان پورت پروسه
+ * فرانت روی Vercel و بک‌اند روی Render اجرا می‌شوند، پس API روی یک دامنه‌ی
+ * جدا است. این آدرس از متغیر NEXT_PUBLIC_API_URL خوانده می‌شود.
  *
- * اگر پروژه را جدا کردید (بک‌اند روی پورت دیگر)، متغیر NEXT_PUBLIC_API_URL
- * را در .env.local تنظیم کنید تا این مقدار بازنویسی شود.
+ *  - پروداکشن (Vercel): در تنظیمات Vercel → NEXT_PUBLIC_API_URL = https://nardeban.onrender.com
+ *  - توسعه‌ی محلی:       در client/.env.local → NEXT_PUBLIC_API_URL = http://localhost:4000
+ *
+ * هوشمند: در توسعه، اگر سایت با IP شبکه باز شده ولی env به localhost اشاره دارد،
+ * خودکار hostname را جایگزین می‌کند (دسترسی از گوشی روی وای‌فای).
  */
 function resolveApiUrl() {
-  // حالت جدا (legacy / production توزیع‌شده): اگر API_URL صریحاً داده شده از آن استفاده کن
-  const explicit = process.env.NEXT_PUBLIC_API_URL;
-  if (explicit) return explicit;
+  const envUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  if (typeof window === 'undefined') return envUrl;
 
-  if (typeof window === 'undefined') {
-    // SSR داخل همان پروسه → API روی همین پورت
-    const port = process.env.PORT || 3000;
-    return `http://localhost:${port}`;
+  const pageHost = window.location.hostname;
+  try {
+    const env = new URL(envUrl);
+    // اگر env به localhost اشاره دارد ولی صفحه از host دیگری باز شده → جایگزینی hostname
+    if (
+      (env.hostname === 'localhost' || env.hostname === '127.0.0.1') &&
+      pageHost !== 'localhost' &&
+      pageHost !== '127.0.0.1'
+    ) {
+      return `${window.location.protocol}//${pageHost}:${env.port || 4000}`;
+    }
+  } catch {
+    /* ignore */
   }
-  // مرورگر → همان origin (نسبی)
-  return '';
+  return envUrl;
 }
 
 export const API_URL = resolveApiUrl();

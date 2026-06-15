@@ -3,7 +3,7 @@ import AdFeed from '../components/AdFeed';
 import CategorySidebar from '../components/CategorySidebar';
 import SaveSearchButton from '../components/SaveSearchButton';
 
-const API = process.env.NEXT_PUBLIC_API_URL || `http://localhost:${process.env.PORT || 3000}`;
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const PAGE_SIZE = 24; // تعداد آگهی در هر تکه
 
 async function getData(searchParams) {
