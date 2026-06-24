@@ -7,6 +7,7 @@ import Ad from './models/Ad.js';
 import { sendPushToUser } from './push.js';
 import { isAllowedOrigin } from './config/cors.js';
 import { JWT_SECRET } from './config/env.js';
+import { incUnreadForRecipient, resetUnreadForReader } from './services/conversation.js';
 
 /**
  * معماری Real-time چت:
@@ -97,12 +98,12 @@ export function initSocket(httpServer) {
         const msg = await Message.create({ conversation: conv._id, sender: uid, text: body });
 
         const iAmSeller = String(conv.seller) === uid;
-        conv.lastMessage = body.slice(0, 100);
-        conv.lastMessageAt = new Date();
-        conv.lastSender = uid;
-        if (iAmSeller) conv.unreadBuyer += 1;
-        else conv.unreadSeller += 1;
-        await conv.save();
+        // به‌روزرسانی اتمیک نخوانده + آخرین پیام (BE-02)
+        await incUnreadForRecipient(conv._id, iAmSeller, {
+          lastMessage: body.slice(0, 100),
+          lastMessageAt: new Date(),
+          lastSender: uid,
+        });
 
         const plain = msg.toObject();
 
@@ -154,9 +155,8 @@ export function initSocket(httpServer) {
         { conversation: conv._id, sender: { $ne: uid }, read: false },
         { read: true }
       );
-      if (String(conv.seller) === uid) conv.unreadSeller = 0;
-      else conv.unreadBuyer = 0;
-      await conv.save();
+      // ریست اتمیک شمارندهٔ نخواندهٔ خوانندهٔ فعلی (BE-02)
+      await resetUnreadForReader(conv._id, String(conv.seller) === uid);
       // به فرستنده‌ها اطلاع بده تیک‌ها دوتایی شود
       socket.to(`conv:${convId}`).emit('msgs:read', { convId, readerId: uid });
     });

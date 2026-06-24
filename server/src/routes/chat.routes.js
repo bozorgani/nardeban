@@ -8,6 +8,7 @@ import { upload } from '../middleware/upload.js';
 import { optimizeImages } from '../middleware/optimizeImages.js';
 import { sendPushToUser } from '../push.js';
 import { ioInstance, isUserOnline } from '../socket.js';
+import { incUnreadForRecipient, resetUnreadForReader } from '../services/conversation.js';
 
 const router = Router();
 router.use(requireAuth); // همهٔ مسیرهای چت نیاز به ورود دارند
@@ -107,15 +108,13 @@ router.get('/conversations/:id/messages', async (req, res, next) => {
 
     const messages = await Message.find(filter).sort({ _id: 1 }).limit(200).lean();
 
-    // خوانده شد
+    // خوانده شد — ریست اتمیک شمارندهٔ نخواندهٔ خوانندهٔ فعلی (BE-02)
     const iAmSeller = conv.seller._id.equals(req.user._id);
     await Message.updateMany(
       { conversation: conv._id, sender: { $ne: req.user._id }, read: false },
       { read: true }
     );
-    if (iAmSeller) conv.unreadSeller = 0;
-    else conv.unreadBuyer = 0;
-    await conv.save();
+    await resetUnreadForReader(conv._id, iAmSeller);
 
     res.json({
       conversation: {
@@ -144,13 +143,13 @@ async function createMessage({ conv, user, text = '', image = '' }) {
     image,
   });
 
-  conv.lastMessage = text ? text.slice(0, 100) : '📷 عکس';
-  conv.lastMessageAt = new Date();
-  conv.lastSender = user._id;
   const iAmSeller = conv.seller.equals(user._id);
-  if (iAmSeller) conv.unreadBuyer += 1;
-  else conv.unreadSeller += 1;
-  await conv.save();
+  // به‌روزرسانی اتمیک: +۱ نخواندهٔ گیرنده و ست‌کردن آخرین پیام (BE-02)
+  await incUnreadForRecipient(conv._id, iAmSeller, {
+    lastMessage: text ? text.slice(0, 100) : '📷 عکس',
+    lastMessageAt: new Date(),
+    lastSender: user._id,
+  });
 
   const plain = msg.toObject();
   const convId = String(conv._id);
