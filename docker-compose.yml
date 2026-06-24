@@ -1,0 +1,37 @@
+
+
+services:
+
+  mongodb:
+    image: mongo:7
+    container_name: nardeban-mongo
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
+  backend:
+    build: ./server
+    container_name: nardeban-backend
+    restart: always
+    depends_on:
+      - mongodb
+    env_file:
+      - ./server/.env
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build: ./client
+    container_name: nardeban-frontend
+    restart: always
+    depends_on:
+      - backend
+    env_file:
+      - ./client/.env.local
+    ports:
+      - "3000:3000"
+
+volumes:
+  mongo_data:

@@ -26,8 +26,8 @@ const server = http.createServer(app);
 initSocket(server); // ⚡ چت Real-time
 
 const start = () =>
-  server.listen(PORT, () => {
-    console.log(`🚀 نردبان API + Socket.io روی http://localhost:${PORT}`);
+  server.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 نردبان API + Socket.io روی http://0.0.0.0:${PORT}`);
     startSavedSearchNotifier();
   });
 
