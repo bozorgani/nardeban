@@ -20,15 +20,47 @@ router.get('/favorites', requireAuth, async (req, res, next) => {
   }
 });
 
-// نشان‌کردن / حذف نشان
+// نشان‌کردن / حذف نشان — toggle اتمیک (BE-03)
+// به‌جای الگوی ناامن «خواندن آرایه → splice/push → save()» (که در toggleهای
+// همزمان باعث lost-update و حتی تکراری‌شدن می‌شد)، از یک آپدیت تک‌مرحله‌ایِ
+// pipeline استفاده می‌کنیم که روی همان سند اتمیک اجرا می‌شود.
 router.post('/favorites/:adId', requireAuth, async (req, res, next) => {
   try {
     const { adId } = req.params;
-    const idx = req.user.favorites.findIndex((f) => f.toString() === adId);
-    if (idx === -1) req.user.favorites.push(adId);
-    else req.user.favorites.splice(idx, 1);
-    await req.user.save();
-    res.json({ favorites: req.user.favorites, saved: idx === -1 });
+    if (!mongoose.isValidObjectId(adId))
+      return res.status(400).json({ message: 'شناسه آگهی نامعتبر' });
+
+    const adObjId = new mongoose.Types.ObjectId(adId);
+
+    const updated = await User.findByIdAndUpdate(
+      req.user._id,
+      [
+        {
+          $set: {
+            favorites: {
+              $cond: [
+                { $in: [adObjId, { $ifNull: ['$favorites', []] }] },
+                // اگر هست → حذف (با حفظ ترتیب بقیه)
+                {
+                  $filter: {
+                    input: { $ifNull: ['$favorites', []] },
+                    cond: { $ne: ['$$this', adObjId] },
+                  },
+                },
+                // اگر نیست → افزودن به انتها
+                { $concatArrays: [{ $ifNull: ['$favorites', []] }, [adObjId]] },
+              ],
+            },
+          },
+        },
+      ],
+      { new: true, projection: { favorites: 1 } }
+    ).lean();
+
+    if (!updated) return res.status(404).json({ message: 'کاربر یافت نشد' });
+
+    const saved = updated.favorites.some((f) => String(f) === adId);
+    res.json({ favorites: updated.favorites, saved });
   } catch (err) {
     next(err);
   }
