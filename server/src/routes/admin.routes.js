@@ -8,6 +8,7 @@ import Message from '../models/Message.js';
 import Report from '../models/Report.js';
 import { requireAdmin } from '../middleware/auth.js';
 import { deleteUploads } from '../utils/files.js';
+import { deleteAdCascade } from '../services/adDeletion.js';
 
 const router = Router();
 router.use(requireAdmin); // همهٔ مسیرها فقط ادمین
@@ -144,26 +145,10 @@ router.post('/ads/:id/reject', async (req, res, next) => {
   }
 });
 
-// حذف کامل آگهی + گفتگوها + پیام‌ها + همه فایل‌های عکس از دیسک
-async function deleteAdCompletely(adId) {
-  const ad = await Ad.findByIdAndDelete(adId);
-  if (!ad) return null;
-  const convs = await Conversation.find({ ad: adId }).select('_id');
-  const convIds = convs.map((c) => c._id);
-  // عکس‌های داخل پیام‌های چت
-  const imgMsgs = await Message.find({ conversation: { $in: convIds }, image: { $ne: '' } }).select('image');
-  await Promise.all([
-    Message.deleteMany({ conversation: { $in: convIds } }),
-    Conversation.deleteMany({ ad: adId }),
-  ]);
-  deleteUploads([...ad.images, ...imgMsgs.map((m) => m.image)]);
-  return ad;
-}
-
-// حذف هر آگهی + گفتگوها و پیام‌هایش
+// حذف هر آگهی + گفتگوها و پیام‌ها و گزارش‌ها (آبشاری امن — BE-01)
 router.delete('/ads/:id', async (req, res, next) => {
   try {
-    const ad = await deleteAdCompletely(req.params.id);
+    const ad = await deleteAdCascade(req.params.id);
     if (!ad) return res.status(404).json({ message: 'آگهی یافت نشد' });
     res.json({ ok: true });
   } catch (err) {
@@ -376,7 +361,7 @@ router.post('/reports/ad/:adId/resolve', async (req, res, next) => {
       ad.rejectReason = r;
       await ad.save();
     } else if (action === 'delete') {
-      await deleteAdCompletely(adId);
+      await deleteAdCascade(adId);
     }
 
     const newStatus = action === 'dismiss' ? 'dismissed' : 'resolved';

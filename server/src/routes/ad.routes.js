@@ -7,6 +7,7 @@ import { upload } from '../middleware/upload.js';
 import { deleteUploads } from '../utils/files.js';
 import { optimizeImages } from '../middleware/optimizeImages.js';
 import { writeLimiter } from '../middleware/limiters.js';
+import { deleteAdCascade } from '../services/adDeletion.js';
 
 const router = Router();
 
@@ -387,12 +388,12 @@ router.patch('/:id', requireAuth, upload.array('images', 5), optimizeImages, asy
 
 router.delete('/:id', requireAuth, async (req, res, next) => {
   try {
-    const ad = await Ad.findById(req.params.id);
+    const ad = await Ad.findById(req.params.id).select('owner');
     if (!ad) return res.status(404).json({ message: 'آگهی یافت نشد' });
     if (!ad.owner.equals(req.user._id))
       return res.status(403).json({ message: 'دسترسی ندارید' });
-    await ad.deleteOne();
-    deleteUploads(ad.images); // پاکسازی عکس‌ها از دیسک
+    // حذف آبشاری امن: آگهی + گفتگوها + پیام‌ها + گزارش‌ها + فایل‌ها (BE-01)
+    await deleteAdCascade(ad._id);
     res.json({ message: 'آگهی حذف شد' });
   } catch (err) {
     next(err);
