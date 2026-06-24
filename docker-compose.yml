@@ -1,26 +1,60 @@
-
+# ============================================================================
+# نردبان — docker-compose پروداکشن (OPS-03)
+#
+# نکات کلیدی:
+#  - Mongo روی شبکهٔ داخلی است و پورتش به بیرون expose نمی‌شود (امنیت).
+#  - احراز هویت Mongo با کاربر/رمز از .env فعال است.
+#  - healthcheck برای هر سرویس + depends_on با شرط سلامت → ترتیب استارت درست.
+#  - پورت‌های backend/frontend فقط روی 127.0.0.1 bind می‌شوند تا nginx (OPS-05)
+#    جلوی آن‌ها بنشیند و چیزی مستقیم از اینترنت در دسترس نباشد.
+#  - آپلودها روی والیوم نام‌دار می‌مانند (پایداری — مرتبط با OPS-04).
+#
+# اجرا:  cp .env.example .env  &&  ویرایش .env  &&  docker compose up -d --build
+# ============================================================================
 
 services:
-
   mongodb:
     image: mongo:7
     container_name: nardeban-mongo
-    restart: always
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASS}
+      MONGO_INITDB_DATABASE: nardeban
     volumes:
       - mongo_data:/data/db
-    ports:
-      - "27017:27017"
+    networks:
+      - nardeban-net
+    # بدون ports → فقط از شبکهٔ داخلی در دسترس است (نه از اینترنت)
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
 
   backend:
     build: ./server
     container_name: nardeban-backend
-    restart: always
+    restart: unless-stopped
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      # اتصال به Mongo از طریق شبکهٔ داخلی با احراز هویت
+      MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASS}@mongodb:27017/nardeban?authSource=admin
     env_file:
       - ./server/.env
+    volumes:
+      # آپلودهای کاربران باید پایدار بمانند (OPS-04)
+      - uploads_data:/app/uploads
+    networks:
+      - nardeban-net
+    # فقط روی لوکال‌هاست سرور (nginx جلوی آن می‌نشیند)
     ports:
-      - "4000:4000"
+      - "127.0.0.1:${BACKEND_PORT:-4000}:4000"
 
   frontend:
     build:
@@ -30,13 +64,22 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     container_name: nardeban-frontend
-    restart: always
+    restart: unless-stopped
     depends_on:
-      - backend
-    env_file:
-      - ./client/.env.local
+      backend:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+    networks:
+      - nardeban-net
+    # فقط روی لوکال‌هاست سرور (nginx جلوی آن می‌نشیند)
     ports:
-      - "3000:3000"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+
+networks:
+  nardeban-net:
+    driver: bridge
 
 volumes:
   mongo_data:
+  uploads_data:
