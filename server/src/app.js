@@ -14,8 +14,7 @@ import helmet from 'helmet';
 import mongoSanitize from 'express-mongo-sanitize';
 import { globalLimiter, otpLimiter, verifyLimiter, writeLimiter } from './middleware/limiters.js';
 import { corsOptions } from './config/cors.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { UPLOAD_DIR } from './config/paths.js';
 
 import authRoutes from './routes/auth.routes.js';
 import adRoutes from './routes/ad.routes.js';
@@ -27,8 +26,6 @@ import adminRoutes from './routes/admin.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import savedSearchRoutes from './routes/savedSearch.routes.js';
 import seoRoutes from './routes/seo.routes.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function createApp() {
   const app = express();
@@ -63,9 +60,10 @@ export function createApp() {
   );
 
   // سرو فایل‌های آپلودشده (با کش طولانی — فایل‌ها immutable اند)
+  // مسیر از config/paths.js (روی والیوم پایدار در Docker — OPS-04)
   app.use(
     '/uploads',
-    express.static(path.join(__dirname, '..', 'uploads'), {
+    express.static(UPLOAD_DIR, {
       maxAge: '30d',
       immutable: true,
     })

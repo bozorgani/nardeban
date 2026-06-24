@@ -1,9 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const UPLOAD_DIR = path.join(__dirname, '..', '..', 'uploads');
+import { UPLOAD_DIR } from '../config/paths.js';
 
 /**
  * حذف امن فایل‌های آپلودشده از دیسک.

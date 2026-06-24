@@ -1,13 +1,14 @@
 import multer from 'multer';
 import path from 'path';
 import crypto from 'crypto';
-import { fileURLToPath } from 'url';
+import fs from 'fs';
+import { UPLOAD_DIR } from '../config/paths.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const uploadDir = path.join(__dirname, '..', '..', 'uploads');
+// اطمینان از وجود پوشهٔ آپلود (روی والیوم پایدار در Docker — OPS-04)
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
+  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`);
