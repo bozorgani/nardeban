@@ -85,7 +85,10 @@ export function usePush(user) {
       const reg = await getSWRegistration();
       let sub = await reg.pushManager.getSubscription();
       if (!sub) {
-        const { key } = await api('/push/vapid-public-key');
+        const { key, enabled } = await api('/push/vapid-public-key');
+        if (enabled === false || !key) {
+          return { error: 'سرویس نوتیفیکیشن روی سرور فعال نیست' };
+        }
         sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(key),

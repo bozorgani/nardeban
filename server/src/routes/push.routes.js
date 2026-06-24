@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import PushSubscription from '../models/PushSubscription.js';
 import { requireAuth } from '../middleware/auth.js';
-import { VAPID_PUBLIC_KEY } from '../push.js';
+import { VAPID_PUBLIC_KEY, isPushConfigured } from '../push.js';
 
 const router = Router();
 
 // کلید عمومی VAPID (برای subscribe در مرورگر)
+// اگر Web Push پیکربندی نشده باشد، key خالی و enabled=false برمی‌گردد
+// تا کلاینت تلاش به subscribe نکند.
 router.get('/vapid-public-key', (_req, res) => {
-  res.json({ key: VAPID_PUBLIC_KEY });
+  res.json({ key: VAPID_PUBLIC_KEY, enabled: isPushConfigured() });
 });
 
 // ثبت اشتراک push برای کاربر جاری
