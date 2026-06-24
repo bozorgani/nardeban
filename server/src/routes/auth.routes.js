@@ -2,8 +2,11 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { requireAuth } from '../middleware/auth.js';
+import { sendOtp } from '../services/sms.js';
 
 const router = Router();
+
+const isProd = process.env.NODE_ENV === 'production';
 
 const sign = (user) =>
   jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '30d' });
@@ -24,9 +27,27 @@ router.post('/request-otp', async (req, res, next) => {
       { upsert: true, new: true }
     );
 
-    // ⚠️ در محیط واقعی این کد با SMS ارسال می‌شود (کاوه‌نگار/قاصدک...).
-    // در نسخه دمو برای تست برگردانده می‌شود:
-    res.json({ message: 'کد تایید ارسال شد', demoCode: code });
+    // ارسال کد با سرویس پیامک. در پروداکشن باید ارائه‌دهنده تنظیم شده باشد؛
+    // در غیر این صورت sendOtp خطا می‌دهد و کد هرگز در پاسخ لو نمی‌رود (SEC-01).
+    let delivered = false;
+    try {
+      ({ delivered } = await sendOtp(phone, code));
+    } catch (smsErr) {
+      console.error('❌ خطای ارسال پیامک:', smsErr.message);
+      if (isProd) {
+        return res
+          .status(503)
+          .json({ message: 'ارسال پیامک در حال حاضر ممکن نیست. لطفاً بعداً تلاش کنید.' });
+      }
+      // در توسعه: ادامه بده تا کد در پاسخ برگردد (delivered=false)
+    }
+
+    const payload = { message: 'کد تایید ارسال شد' };
+    // کد فقط در توسعه و فقط وقتی پیامک واقعی ارسال نشده برمی‌گردد (کمک به تست محلی).
+    // در پروداکشن تحت هیچ شرایطی کد در پاسخ قرار نمی‌گیرد.
+    if (!isProd && !delivered) payload.demoCode = code;
+
+    res.json(payload);
   } catch (err) {
     next(err);
   }
