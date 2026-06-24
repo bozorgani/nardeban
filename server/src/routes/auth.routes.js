@@ -3,13 +3,14 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { requireAuth } from '../middleware/auth.js';
 import { sendOtp } from '../services/sms.js';
+import { JWT_SECRET } from '../config/env.js';
 
 const router = Router();
 
 const isProd = process.env.NODE_ENV === 'production';
 
 const sign = (user) =>
-  jwt.sign({ id: user._id }, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '30d' });
+  jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '30d' });
 
 // مرحله ۱: درخواست کد تایید
 router.post('/request-otp', async (req, res, next) => {

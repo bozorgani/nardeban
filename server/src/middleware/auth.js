@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { JWT_SECRET } from '../config/env.js';
 
 export async function requireAuth(req, res, next) {
   try {
@@ -7,7 +8,7 @@ export async function requireAuth(req, res, next) {
     const token = header.startsWith('Bearer ') ? header.slice(7) : null;
     if (!token) return res.status(401).json({ message: 'ابتدا وارد شوید' });
 
-    const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
+    const payload = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(payload.id);
     if (!user) return res.status(401).json({ message: 'کاربر یافت نشد' });
     if (user.isBlocked)
@@ -35,7 +36,7 @@ export async function optionalAuth(req, _res, next) {
     const header = req.headers.authorization || '';
     const token = header.startsWith('Bearer ') ? header.slice(7) : null;
     if (token) {
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
+      const payload = jwt.verify(token, JWT_SECRET);
       req.user = await User.findById(payload.id);
     }
   } catch {

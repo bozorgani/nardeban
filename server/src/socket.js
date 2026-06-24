@@ -6,6 +6,7 @@ import User from './models/User.js';
 import Ad from './models/Ad.js';
 import { sendPushToUser } from './push.js';
 import { isAllowedOrigin } from './config/cors.js';
+import { JWT_SECRET } from './config/env.js';
 
 /**
  * معماری Real-time چت:
@@ -38,7 +39,7 @@ export function initSocket(httpServer) {
     try {
       const token = socket.handshake.auth?.token;
       if (!token) return next(new Error('unauthorized'));
-      const payload = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
+      const payload = jwt.verify(token, JWT_SECRET);
       const user = await User.findById(payload.id).select('_id name phone');
       if (!user) return next(new Error('unauthorized'));
       socket.userId = String(user._id);
