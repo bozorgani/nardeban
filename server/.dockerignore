@@ -1,0 +1,22 @@
+# وابستگی‌ها و کش‌ها (داخل ایمیج دوباره نصب می‌شوند)
+node_modules
+npm-debug.log*
+
+# اسرار و فایل‌های محیطی — هرگز نباید وارد ایمیج شوند
+.env
+.env.*
+!.env.example
+
+# آپلودهای کاربران (باید روی والیوم بمانند، نه داخل ایمیج)
+uploads/*
+!uploads/.gitkeep
+
+# داده‌های موقت توسعه
+.mongo-tmp
+*.log
+
+# گیت و متادیتا
+.git
+.gitignore
+.dockerignore
+Dockerfile
