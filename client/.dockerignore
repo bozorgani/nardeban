@@ -1,0 +1,22 @@
+# وابستگی‌ها و خروجی build (داخل ایمیج بازساخته می‌شوند)
+node_modules
+.next
+out
+
+# اسرار و فایل‌های محیطی — هرگز نباید وارد ایمیج شوند
+.env
+.env.*
+!.env.local.example
+
+# لاگ‌ها و کش
+npm-debug.log*
+*.log
+
+# گیت و متادیتا
+.git
+.gitignore
+.dockerignore
+Dockerfile
+
+# اسکریپت‌های تستی موقت
+test-*.mjs

@@ -5,6 +5,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // خروجی standalone: ایمیج Docker سبک (فقط فایل‌های لازم + node_modules حداقلی)
+  output: 'standalone',
+
   // ریشه پروژه = همین پوشه client (جلوگیری از تشخیص اشتباه وقتی lockfile دیگری در پوشه‌های والد هست)
   turbopack: {
     root: __dirname,

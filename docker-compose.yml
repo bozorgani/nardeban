@@ -23,7 +23,12 @@ services:
       - "4000:4000"
 
   frontend:
-    build: ./client
+    build:
+      context: ./client
+      # NEXT_PUBLIC_* در زمان build داخل باندل قرار می‌گیرند (نه runtime)
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
     container_name: nardeban-frontend
     restart: always
     depends_on:
