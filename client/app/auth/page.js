@@ -62,9 +62,9 @@ export default function AuthPage() {
     }
   };
 
-  // تایید خودکار وقتی ۵ رقم کامل شد
+  // تایید خودکار وقتی ۶ رقم کامل شد
   useEffect(() => {
-    if (step === 2 && digitsOnly(code).length === 5 && !busy) verify();
+    if (step === 2 && digitsOnly(code).length === 6 && !busy) verify();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
 
@@ -81,7 +81,7 @@ export default function AuthPage() {
           </h1>
           <p className="mt-1 text-xs text-white/75">
             {step === 1 ? 'با شماره موبایل وارد شوید' : (
-              <>کد ۵ رقمی به <b dir="ltr">{phone}</b> ارسال شد</>
+              <>کد ۶ رقمی به <b dir="ltr">{phone}</b> ارسال شد</>
             )}
           </p>
         </div>
@@ -129,12 +129,12 @@ export default function AuthPage() {
                 dir="ltr"
                 inputMode="numeric"
                 value={code}
-                onChange={(e) => setCode(digitsOnly(e.target.value).slice(0, 5))}
+                onChange={(e) => setCode(digitsOnly(e.target.value).slice(0, 6))}
                 placeholder="— — — — —"
                 className="w-full rounded-2xl border border-gray-200 bg-gray-50 py-4 text-center text-2xl font-bold tracking-[0.4em] outline-none transition focus:border-brand focus:bg-white"
               />
               <button
-                disabled={busy || digitsOnly(code).length !== 5}
+                disabled={busy || digitsOnly(code).length !== 6}
                 className="w-full rounded-2xl bg-brand py-4 text-sm font-extrabold text-white shadow-lg shadow-brand/25 transition hover:bg-brand-dark disabled:opacity-40 disabled:shadow-none"
               >
                 {busy ? 'در حال بررسی...' : 'تایید و ورود'}

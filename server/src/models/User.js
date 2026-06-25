@@ -8,9 +8,12 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
     isBlocked: { type: Boolean, default: false },
     favorites: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Ad' }],
-    // OTP (در نسخه دمو، کد در پاسخ API برگردانده می‌شود)
-    otpCode: { type: String, select: false },
+    // OTP — کد به‌صورت هش (SHA-256) ذخیره می‌شود، نه plaintext (SEC-08)
+    otpHash: { type: String, select: false },
     otpExpires: { type: Date, select: false },
+    // ضد brute-force per-phone (SEC-07)
+    otpAttempts: { type: Number, default: 0, select: false }, // تلاش‌های ناموفق verify
+    otpLockedUntil: { type: Date, select: false }, // قفل موقت پس از تلاش زیاد
   },
   { timestamps: true }
 );
