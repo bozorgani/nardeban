@@ -1,16 +1,19 @@
 /**
  * سرویس ارسال پیامک کد تایید (OTP)
  * ----------------------------------------------------------------------------
- * در پروداکشن باید یک ارائه‌دهندهٔ واقعی پیامک تنظیم شود (کاوه‌نگار به‌صورت پیش‌فرض
- * پشتیبانی می‌شود). تا وقتی ارائه‌دهنده تنظیم نشده، در حالت توسعه کد فقط در کنسول
- * چاپ می‌شود و در پاسخ API هم (فقط در توسعه) برمی‌گردد؛ اما در پروداکشن هرگز کد
- * در پاسخ برنمی‌گردد (رفع آسیب‌پذیری SEC-01).
+ * ارائه‌دهنده‌ها:  smsir (پیش‌فرض تولید) | kavenegar | console | none
+ * تا وقتی ارائه‌دهندهٔ واقعی تنظیم نشده، در حالت توسعه کد در کنسول چاپ و فقط در
+ * توسعه در پاسخ API برمی‌گردد؛ در پروداکشن هرگز کد در پاسخ برنمی‌گردد (SEC-01).
  *
  * متغیرهای محیطی:
- *   NODE_ENV            production | development
- *   SMS_PROVIDER        kavenegar | console | none   (پیش‌فرض: console در توسعه، none در پروداکشن)
- *   KAVENEGAR_API_KEY   کلید API کاوه‌نگار
- *   KAVENEGAR_TEMPLATE  نام الگوی verify-lookup (پیش‌فرض: verify)
+ *   NODE_ENV               production | development
+ *   SMS_PROVIDER           smsir | kavenegar | console | none
+ *   --- sms.ir ---
+ *   SMSIR_API_KEY          توکن X-API-KEY از پنل sms.ir
+ *   SMSIR_TEMPLATE_ID      شناسهٔ قالب verify
+ *   SMSIR_PARAM_NAME       نام پارامتر کد در قالب (پیش‌فرض: CODE)
+ *   --- کاوه‌نگار ---
+ *   KAVENEGAR_API_KEY / KAVENEGAR_TEMPLATE
  *
  * خروجی sendOtp:  { delivered: boolean }
  *   delivered=true  → پیامک واقعی ارسال شد  → نباید کد در پاسخ API برگردد
@@ -30,6 +33,35 @@ function activeProvider() {
 export function isSmsConfigured() {
   const p = activeProvider();
   return p !== 'console' && p !== 'none';
+}
+
+/** ارسال با sms.ir (Verify Send) */
+async function sendSmsIr(phone, code) {
+  const apiKey = process.env.SMSIR_API_KEY;
+  const templateId = process.env.SMSIR_TEMPLATE_ID;
+  const paramName = process.env.SMSIR_PARAM_NAME || 'CODE';
+  if (!apiKey) throw new Error('SMSIR_API_KEY تنظیم نشده است');
+  if (!templateId) throw new Error('SMSIR_TEMPLATE_ID تنظیم نشده است');
+
+  const res = await fetch('https://api.sms.ir/v1/send/verify', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      'X-API-KEY': apiKey,
+    },
+    body: JSON.stringify({
+      mobile: phone,
+      templateId: Number(templateId),
+      parameters: [{ name: paramName, value: String(code) }],
+    }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  // sms.ir موفقیت را با status=1 برمی‌گرداند
+  if (!res.ok || data?.status !== 1) {
+    throw new Error(`خطای sms.ir: ${data?.message || `HTTP ${res.status}`}`);
+  }
 }
 
 /** ارسال با کاوه‌نگار (verify lookup) */
@@ -60,6 +92,10 @@ export async function sendOtp(phone, code) {
   const provider = activeProvider();
 
   switch (provider) {
+    case 'smsir':
+      await sendSmsIr(phone, code);
+      return { delivered: true };
+
     case 'kavenegar':
       await sendKavenegar(phone, code);
       return { delivered: true };
