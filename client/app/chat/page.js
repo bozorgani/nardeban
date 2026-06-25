@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api, API_URL, getToken, imgUrl, timeAgo } from '../../lib/api';
+import { api, API_URL, imgUrl, timeAgo } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import { useSocket } from '../../lib/useSocket';
 import { useToast } from '../../components/Toast';
@@ -287,7 +287,7 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
       if (caption) fd.set('text', caption);
       const res = await fetch(`${API_URL}/api/chat/conversations/${conversationId}/images`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
+        credentials: 'include', // کوکی HttpOnly توکن (SEC-04)
         body: fd,
       });
       const data = await res.json();

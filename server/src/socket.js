@@ -8,6 +8,20 @@ import { sendPushToUser } from './push.js';
 import { isAllowedOrigin } from './config/cors.js';
 import { JWT_SECRET } from './config/env.js';
 import { incUnreadForRecipient, resetUnreadForReader } from './services/conversation.js';
+import { TOKEN_COOKIE } from './utils/token.js';
+
+// استخراج توکن از کوکی handshake سوکت (SEC-04)
+function getTokenFromHandshake(socket) {
+  const raw = socket.handshake.headers?.cookie || '';
+  for (const part of raw.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx === -1) continue;
+    if (part.slice(0, idx).trim() === TOKEN_COOKIE) {
+      return decodeURIComponent(part.slice(idx + 1).trim());
+    }
+  }
+  return null;
+}
 
 /**
  * معماری Real-time چت:
@@ -38,7 +52,9 @@ export function initSocket(httpServer) {
   // ---- احراز هویت هر اتصال با JWT ----
   io.use(async (socket, next) => {
     try {
-      const token = socket.handshake.auth?.token;
+      // اولویت: کوکی HttpOnly از handshake (SEC-04) — fallback به auth.token برای سازگاری
+      const token =
+        getTokenFromHandshake(socket) || socket.handshake.auth?.token;
       if (!token) return next(new Error('unauthorized'));
       const payload = jwt.verify(token, JWT_SECRET);
       const user = await User.findById(payload.id).select('_id name phone');

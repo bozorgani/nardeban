@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { api, API_URL, getToken, digitsOnly } from '../../lib/api';
+import { api, API_URL, digitsOnly } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../components/Toast';
 import CategoryFields from '../../components/CategoryFields';
@@ -217,7 +217,7 @@ export default function NewAdWizard() {
     try {
       const res = await fetch(`${API_URL}/api/ads`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
+        credentials: 'include', // کوکی HttpOnly توکن (SEC-04)
         body: fd,
       });
       const data = await res.json();

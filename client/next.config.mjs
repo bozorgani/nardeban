@@ -38,6 +38,44 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.railway.app', pathname: '/uploads/**' },
     ],
   },
+
+  // ------------------------------------------------------------------------
+  // CSP و هدرهای امنیتی روی صفحات HTML (SEC-05)
+  // چون صفحات را Next سرو می‌کند، CSP مؤثر برای XSS اینجا اعمال می‌شود.
+  // منابع مجاز بر اساس استفادهٔ واقعی پروژه:
+  //   - فونت Vazirmatn از jsdelivr (style/font)
+  //   - کاشی‌های نقشه OpenStreetMap (img) + Nominatim (connect)
+  //   - اتصال API/Socket.io به همان origin (connect: 'self' + ws/wss)
+  // نکته: 'unsafe-inline' برای اسکریپت محافظ تم (FOUC) و بوت‌استرپ Next لازم است.
+  // ------------------------------------------------------------------------
+  async headers() {
+    const csp = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+      "font-src 'self' https://cdn.jsdelivr.net data:",
+      "img-src 'self' data: blob: https: http:",
+      "connect-src 'self' https: wss: ws:",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
+    ].join('; ');
+
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: csp },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

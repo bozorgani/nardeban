@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { api, API_URL, getToken, digitsOnly, imgUrl } from '../../../../lib/api';
+import { api, API_URL, digitsOnly, imgUrl } from '../../../../lib/api';
 import { useAuth } from '../../../../lib/AuthContext';
 import { useToast } from '../../../../components/Toast';
 import CategoryFields from '../../../../components/CategoryFields';
@@ -145,7 +145,7 @@ export default function EditAdPage({ params }) {
     try {
       const res = await fetch(`${API_URL}/api/ads/${id}`, {
         method: 'PATCH',
-        headers: { Authorization: `Bearer ${getToken()}` },
+        credentials: 'include', // کوکی HttpOnly توکن (SEC-04)
         body: fd,
       });
       const data = await res.json();

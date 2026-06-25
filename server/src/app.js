@@ -32,10 +32,22 @@ export function createApp() {
   app.set('trust proxy', 1); // پشت Nginx/پروکسی، IP واقعی برای rate-limit
 
   /* ---------- امنیت ---------- */
+  // helmet روی پاسخ‌های API/uploads. CSP اصلیِ صفحات HTML در Next.js اعمال می‌شود
+  // (next.config headers) چون صفحات را Next سرو می‌کند نه Express (SEC-05).
   app.use(
     helmet({
       crossOriginResourcePolicy: { policy: 'cross-origin' }, // عکس‌ها از کلاینت لود می‌شوند
-      contentSecurityPolicy: false,
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          // پاسخ‌های backend عمدتاً JSON و عکس‌اند؛ سیاست سخت‌گیرانه:
+          defaultSrc: ["'none'"],
+          imgSrc: ["'self'", 'data:', 'blob:'],
+          frameAncestors: ["'none'"],
+          baseUri: ["'none'"],
+          formAction: ["'self'"],
+        },
+      },
     })
   );
   app.use(cors(corsOptions));

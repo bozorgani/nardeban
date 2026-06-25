@@ -33,15 +33,15 @@ function resolveApiUrl() {
 
 export const API_URL = resolveApiUrl();
 
+// توکن دیگر در localStorage نگهداری نمی‌شود (SEC-04) — احراز هویت با کوکی HttpOnly
+// است که مرورگر خودکار با credentials:'include' ارسال می‌کند. این تابع برای
+// سازگاری باقی مانده ولی همیشه null برمی‌گرداند (دیگر جایی توکن سمت JS نیست).
 export function getToken() {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem('nardeban_token');
+  return null;
 }
 
 export async function api(path, { method = 'GET', body, isForm = false } = {}) {
   const headers = {};
-  const token = getToken();
-  if (token) headers.Authorization = `Bearer ${token}`;
   if (body && !isForm) headers['Content-Type'] = 'application/json';
 
   const res = await fetch(`${API_URL}/api${path}`, {
@@ -49,6 +49,7 @@ export async function api(path, { method = 'GET', body, isForm = false } = {}) {
     headers,
     body: isForm ? body : body ? JSON.stringify(body) : undefined,
     cache: 'no-store',
+    credentials: 'include', // ارسال کوکی HttpOnly توکن (SEC-04)
   });
 
   const data = await res.json().catch(() => ({}));

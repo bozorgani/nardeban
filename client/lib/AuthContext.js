@@ -6,15 +6,8 @@ import { useToast } from '../components/Toast';
 
 const AuthContext = createContext(null);
 
-// کوکی توکن — برای اینکه SSR (صفحه جزئیات آگهی) هم بتواند با هویت کاربر fetch کند
-function setTokenCookie(token) {
-  if (typeof document === 'undefined') return;
-  if (token) {
-    document.cookie = `nardeban_token=${token}; path=/; max-age=${30 * 24 * 3600}; SameSite=Lax`;
-  } else {
-    document.cookie = 'nardeban_token=; path=/; max-age=0';
-  }
-}
+// توکن در کوکی HttpOnly سمت سرور ست می‌شود (SEC-04) — دیگر در localStorage یا
+// کوکی قابل‌خواندن با JS نگهداری نمی‌شود. کلاینت فقط با /auth/me وضعیت را می‌گیرد.
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -23,14 +16,10 @@ export function AuthProvider({ children }) {
 
   const refresh = useCallback(async () => {
     try {
-      const token = localStorage.getItem('nardeban_token');
-      if (!token) return setUser(null);
-      setTokenCookie(token); // همگام‌سازی کوکی برای SSR
+      // کوکی HttpOnly خودکار ارسال می‌شود؛ اگر معتبر بود کاربر برمی‌گردد.
       const { user } = await api('/auth/me');
       setUser(user);
     } catch {
-      localStorage.removeItem('nardeban_token');
-      setTokenCookie(null);
       setUser(null);
     } finally {
       setLoading(false);
@@ -41,9 +30,9 @@ export function AuthProvider({ children }) {
     refresh();
   }, [refresh]);
 
-  const login = (token, userData) => {
-    localStorage.setItem('nardeban_token', token);
-    setTokenCookie(token);
+  // login: سرور قبلاً کوکی را ست کرده؛ اینجا فقط وضعیت UI به‌روز می‌شود.
+  // (پارامتر token برای سازگاری امضای قبلی نگه داشته شده ولی استفاده نمی‌شود.)
+  const login = (_token, userData) => {
     setUser(userData);
     toast?.success(
       userData?.name?.trim()
@@ -54,8 +43,11 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    localStorage.removeItem('nardeban_token');
-    setTokenCookie(null);
+    try {
+      await api('/auth/logout', { method: 'POST' }); // پاک‌کردن کوکی HttpOnly در سرور
+    } catch {
+      /* ignore */
+    }
     setUser(null);
     toast?.info('از حساب خود خارج شدید — به امید دیدار 👋');
     // بستن اتصال real-time

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { API_URL, getToken } from './api';
+import { API_URL } from './api';
 
 // یک اتصال سراسری مشترک بین همه کامپوننت‌ها (هدر + صفحه چت)
 let sharedSocket = null;
@@ -10,11 +10,10 @@ let refCount = 0;
 
 export function getSocket() {
   if (!sharedSocket) {
-    const token = getToken();
-    if (!token) return null;
-    // Socket.io به بک‌اند (Render) وصل می‌شود — همان آدرس API.
+    // احراز هویت سوکت با کوکی HttpOnly انجام می‌شود (SEC-04):
+    // withCredentials=true باعث ارسال کوکی در handshake می‌شود و سرور آن را می‌خواند.
     sharedSocket = io(API_URL, {
-      auth: { token },
+      withCredentials: true,
       transports: ['websocket', 'polling'],
       reconnectionDelay: 2000,
     });

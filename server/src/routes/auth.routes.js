@@ -5,6 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { sendOtp } from '../services/sms.js';
 import { JWT_SECRET } from '../config/env.js';
 import { generateOtp, hashOtp, safeEqualHash } from '../utils/otp.js';
+import { TOKEN_COOKIE, tokenCookieOptions } from '../utils/token.js';
 
 const router = Router();
 
@@ -115,13 +116,25 @@ router.post('/verify-otp', async (req, res, next) => {
     user.otpLockedUntil = null;
     await user.save();
 
+    const token = sign(user);
+    // توکن در کوکی HttpOnly ست می‌شود (SEC-04) — برای مرورگر، غیرقابل دسترس به JS.
+    res.cookie(TOKEN_COOKIE, token, tokenCookieOptions());
+
     res.json({
-      token: sign(user),
+      // token برای سازگاری با کلاینت‌های غیرمرورگری/SSR هم برگردانده می‌شود،
+      // ولی کلاینت مرورگری دیگر آن را در localStorage ذخیره نمی‌کند (از کوکی استفاده می‌شود).
+      token,
       user: { id: user._id, phone: user.phone, name: user.name, city: user.city, role: user.role },
     });
   } catch (err) {
     next(err);
   }
+});
+
+// خروج — پاک‌کردن کوکی توکن (SEC-04)
+router.post('/logout', (_req, res) => {
+  res.clearCookie(TOKEN_COOKIE, { ...tokenCookieOptions(), maxAge: undefined });
+  res.json({ ok: true });
 });
 
 // اطلاعات کاربر جاری
