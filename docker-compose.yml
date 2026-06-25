@@ -5,8 +5,9 @@
 #  - Mongo روی شبکهٔ داخلی است و پورتش به بیرون expose نمی‌شود (امنیت).
 #  - احراز هویت Mongo با کاربر/رمز از .env فعال است.
 #  - healthcheck برای هر سرویس + depends_on با شرط سلامت → ترتیب استارت درست.
-#  - پورت‌های backend/frontend فقط روی 127.0.0.1 bind می‌شوند تا nginx (OPS-05)
-#    جلوی آن‌ها بنشیند و چیزی مستقیم از اینترنت در دسترس نباشد.
+#  - پورت‌های backend/frontend فقط روی 127.0.0.1 bind می‌شوند تا nginxِ نصب‌شده
+#    روی خود Ubuntu (نه داکر) جلوی آن‌ها بنشیند و چیزی مستقیم از اینترنت در دسترس نباشد.
+#  - کانفیگ nginx میزبان در nginx/nardeban.conf است (در /etc/nginx/sites-available قرار می‌گیرد).
 #  - آپلودها روی والیوم نام‌دار می‌مانند (پایداری — مرتبط با OPS-04).
 #
 # اجرا:  cp .env.example .env  &&  ویرایش .env  &&  docker compose up -d --build
@@ -76,31 +77,6 @@ services:
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
 
-  nginx:
-    image: nginx:1.27-alpine
-    container_name: nardeban-nginx
-    restart: unless-stopped
-    depends_on:
-      - backend
-      - frontend
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      # برای SSL (Let's Encrypt) — هنگام فعال‌سازی استفاده می‌شوند
-      - certbot_conf:/etc/letsencrypt:ro
-      - certbot_www:/var/www/certbot
-    networks:
-      - nardeban-net
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/api/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 20s
-
 networks:
   nardeban-net:
     driver: bridge
@@ -108,5 +84,3 @@ networks:
 volumes:
   mongo_data:
   uploads_data:
-  certbot_conf:
-  certbot_www:
