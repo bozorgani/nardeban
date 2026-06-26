@@ -94,9 +94,6 @@ export const CATEGORY_FIELDS = {
   /* ====================================================================== */
   /*  کالای دیجیتال (digital)                                                */
   /* ====================================================================== */
-  digital: [
-    { key: 'condition2', label: 'وضعیت', type: 'select', options: COND, filter: true },
-  ],
   // موبایل
   'mobile-phones': [
     { key: 'brand', label: 'برند', type: 'select', options: ['سامسونگ', 'اپل', 'شیائومی', 'هواوی', 'نوکیا', 'ال‌جی', 'سونی', 'وان‌پلاس', 'گوگل', 'موتورولا', 'سایر'], filter: true },
@@ -144,9 +141,6 @@ export const CATEGORY_FIELDS = {
   /* ====================================================================== */
   /*  خانه و آشپزخانه (home-kitchen)                                         */
   /* ====================================================================== */
-  'home-kitchen': [
-    { key: 'condition2', label: 'وضعیت', type: 'select', options: COND, filter: true },
-  ],
   appliances: [
     { key: 'brand', label: 'برند', type: 'select', options: ['اسنوا', 'ال‌جی', 'سامسونگ', 'بوش', 'پاکشوما', 'امرسان', 'دوو', 'هیمالیا', 'سایر'], filter: true },
   ],
@@ -171,9 +165,6 @@ export const CATEGORY_FIELDS = {
   /* ====================================================================== */
   /*  وسایل شخصی (personal)                                                  */
   /* ====================================================================== */
-  personal: [
-    { key: 'condition2', label: 'وضعیت', type: 'select', options: ['نو / استفاده‌نشده', 'در حد نو', 'کارکرده'], filter: true },
-  ],
   clothing: [
     { key: 'clothingSize', label: 'سایز', type: 'select', options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'فری‌سایز'], filter: true },
   ],
@@ -204,9 +195,6 @@ export const CATEGORY_FIELDS = {
   /* ====================================================================== */
   /*  تجهیزات و صنعتی (industrial)                                           */
   /* ====================================================================== */
-  industrial: [
-    { key: 'condition2', label: 'وضعیت', type: 'select', options: ['نو', 'کارکرده'], filter: true },
-  ],
   tools: [
     { key: 'toolPower', label: 'منبع نیرو', type: 'select', options: ['برقی', 'شارژی', 'بنزینی', 'دستی', 'بادی'], filter: true },
   ],

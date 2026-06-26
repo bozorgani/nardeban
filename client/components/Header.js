@@ -74,6 +74,11 @@ function SearchBar() {
     if (list.length) sp.set('city', list.join(','));
     else sp.delete('city');
     sp.delete('page');
+    // به‌خاطر سپردن انتخاب شهر کاربر (مورد ۱۱) — برای پیش‌فرض بازدیدهای بعدی
+    try {
+      if (list.length) localStorage.setItem('nardeban_city', list.join(','));
+      else localStorage.removeItem('nardeban_city');
+    } catch { /* ignore */ }
     router.push(`/?${sp.toString()}`);
   };
 

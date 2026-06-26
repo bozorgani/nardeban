@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import AdFeed from '../components/AdFeed';
 import CategorySidebar from '../components/CategorySidebar';
 import SaveSearchButton from '../components/SaveSearchButton';
+import CityDefault from '../components/CityDefault';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 const PAGE_SIZE = 24; // تعداد آگهی در هر تکه
@@ -72,6 +73,9 @@ export default async function HomePage({ searchParams }) {
 
   return (
     <div className="grid grid-cols-1 gap-8 md:grid-cols-[230px_1fr]">
+      <Suspense fallback={null}>
+        <CityDefault />
+      </Suspense>
       <Suspense fallback={null}>
         <CategorySidebar tree={tree} />
       </Suspense>
