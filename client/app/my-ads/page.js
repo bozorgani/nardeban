@@ -203,9 +203,9 @@ export default function MyAdsPage() {
                 )}
 
                 {/* اکشن‌ها */}
-                <div className="flex items-center gap-2 border-t border-gray-50 bg-gray-50/50 px-4 py-3">
+                <div className="flex flex-wrap items-center gap-2 border-t border-gray-50 bg-gray-50/50 px-4 py-3">
                   {['pending', 'rejected'].includes(ad.status) ? (
-                    <span className="text-[11px] text-gray-400">
+                    <span className="w-full text-[11px] text-gray-400 sm:w-auto">
                       {ad.status === 'pending' ? 'در حال بررسی توسط مدیر...' : 'برای انتشار مجدد، ویرایش کنید'}
                     </span>
                   ) : (
@@ -222,17 +222,16 @@ export default function MyAdsPage() {
                   )}
                   <Link
                     href={`/my-ads/edit/${ad._id}`}
-                    className="rounded-xl bg-gray-900 px-4 py-2 text-xs font-bold text-white transition hover:bg-gray-700"
+                    className="flex-1 rounded-xl bg-gray-900 px-4 py-2 text-center text-xs font-bold text-white transition hover:bg-gray-700 sm:flex-none"
                   >
                     ✏️ ویرایش
                   </Link>
                   <Link
                     href={`/ads/${ad._id}`}
-                    className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-xs text-gray-600 transition hover:border-gray-300"
+                    className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2 text-center text-xs text-gray-600 transition hover:border-gray-300 sm:flex-none"
                   >
                     مشاهده
                   </Link>
-                  <span className="flex-1" />
                   <button
                     onClick={() => remove(ad._id)}
                     className="rounded-xl px-3 py-2 text-xs text-red-400 transition hover:bg-red-50 hover:text-red-600"
