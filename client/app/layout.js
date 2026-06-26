@@ -1,5 +1,19 @@
 import './globals.css';
+import localFont from 'next/font/local';
 import { AuthProvider } from '../lib/AuthContext';
+
+// فونت وزیرمتن خودمیزبان (UX-09) — بدون CDN، بهینه، بدون FOUC
+const vazirmatn = localFont({
+  src: [
+    { path: '../public/fonts/Vazirmatn-400.woff2', weight: '400', style: 'normal' },
+    { path: '../public/fonts/Vazirmatn-500.woff2', weight: '500', style: 'normal' },
+    { path: '../public/fonts/Vazirmatn-700.woff2', weight: '700', style: 'normal' },
+    { path: '../public/fonts/Vazirmatn-900.woff2', weight: '900', style: 'normal' },
+  ],
+  display: 'swap',
+  variable: '--font-vazirmatn',
+  fallback: ['Tahoma', 'system-ui', 'sans-serif'],
+});
 import { ToastProvider } from '../components/Toast';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
@@ -33,7 +47,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="fa" dir="rtl" suppressHydrationWarning>
+    <html lang="fa" dir="rtl" className={vazirmatn.variable} suppressHydrationWarning>
       <head>
         {/* 🌙 جلوگیری از پرش تم (FOUC): پیش از رنگ‌آمیزی، تم ذخیره‌شده/سیستم اعمال می‌شود */}
         <script
@@ -43,11 +57,6 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        <link
-          rel="stylesheet"
-          precedence="default"
-          href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css"
-        />
         <ToastProvider>
           <AuthProvider>
             <Header />

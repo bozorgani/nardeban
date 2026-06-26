@@ -1,12 +1,12 @@
 @import 'tailwindcss';
 
-/* فونت وزیرمتن در layout.js با <link> لود می‌شود (CDN) */
+/* فونت وزیرمتن خودمیزبان از طریق next/font/local در layout.js (UX-09) */
 
 @theme {
   --color-brand: #a62626;
   --color-brand-dark: #8b1e1e;
   --color-brand-light: #fdf1f1;
-  --font-sans: 'Vazirmatn', Vazirmatn, Tahoma, system-ui, sans-serif;
+  --font-sans: var(--font-vazirmatn), Tahoma, system-ui, sans-serif;
 }
 
 html {

@@ -43,7 +43,7 @@ const nextConfig = {
   // CSP و هدرهای امنیتی روی صفحات HTML (SEC-05)
   // چون صفحات را Next سرو می‌کند، CSP مؤثر برای XSS اینجا اعمال می‌شود.
   // منابع مجاز بر اساس استفادهٔ واقعی پروژه:
-  //   - فونت Vazirmatn از jsdelivr (style/font)
+  //   - فونت Vazirmatn خودمیزبان (next/font/local) — نیازی به CDN نیست
   //   - کاشی‌های نقشه OpenStreetMap (img) + Nominatim (connect)
   //   - اتصال API/Socket.io به همان origin (connect: 'self' + ws/wss)
   // نکته: 'unsafe-inline' برای اسکریپت محافظ تم (FOUC) و بوت‌استرپ Next لازم است.
@@ -56,8 +56,8 @@ const nextConfig = {
       "frame-ancestors 'none'",
       "form-action 'self'",
       "script-src 'self' 'unsafe-inline'",
-      "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-      "font-src 'self' https://cdn.jsdelivr.net data:",
+      "style-src 'self' 'unsafe-inline'",
+      "font-src 'self' data:",
       "img-src 'self' data: blob: https: http:",
       "connect-src 'self' https: wss: ws:",
       "worker-src 'self' blob:",
