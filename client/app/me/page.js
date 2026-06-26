@@ -271,11 +271,11 @@ export default function MePage() {
               { v: stats?.views, l: 'بازدید' },
               { v: stats?.favorites, l: 'نشان‌شده' },
             ].map((s) => (
-              <div key={s.l} className="text-center">
-                <p className="text-lg font-black text-gray-800">
+              <div key={s.l} className="px-1 text-center">
+                <p className="truncate text-base font-black text-gray-800 sm:text-lg">
                   {s.v === undefined ? '—' : Number(s.v).toLocaleString('fa-IR')}
                 </p>
-                <p className="mt-0.5 text-[10px] text-gray-400">{s.l}</p>
+                <p className="mt-0.5 text-[11px] leading-4 text-gray-400">{s.l}</p>
               </div>
             ))}
           </div>
