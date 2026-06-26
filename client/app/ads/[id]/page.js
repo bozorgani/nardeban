@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { cache } from 'react';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import FavoriteButton from '../../../components/FavoriteButton';
@@ -8,10 +9,12 @@ import Gallery from './Gallery';
 import ReportButton from '../../../components/ReportButton';
 import ShareButton from '../../../components/ShareButton';
 import SimilarAds from './SimilarAds';
+import ViewCounter from './ViewCounter';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
-async function getAd(id) {
+// با React cache، page و generateMetadata در همان درخواست فقط یک‌بار fetch می‌کنند (FE-01)
+const getAd = cache(async (id) => {
   try {
     // توکن کاربر از کوکی → مالک/ادمین آگهی pending/rejected خود را هم می‌بیند
     const cookieStore = await cookies();
@@ -26,16 +29,14 @@ async function getAd(id) {
   } catch {
     return null;
   }
-}
+});
 
 // متادیتای پویا برای SEO — عنوان و توضیحات هر آگهی به‌صورت اختصاصی
 // (فقط آگهی‌های فعال؛ pending/rejected برای دیگران 404 می‌شوند)
 export async function generateMetadata({ params }) {
   const { id } = await params;
   try {
-    const res = await fetch(`${API}/api/ads/${id}`, { cache: 'no-store' });
-    if (!res.ok) return { title: 'آگهی یافت نشد | نردبان' };
-    const { ad } = await res.json();
+    const ad = await getAd(id); // همان fetch مشترک (بدون درخواست اضافه)
     if (!ad) return { title: 'آگهی یافت نشد | نردبان' };
 
     const priceText = ad.isFree
@@ -93,6 +94,9 @@ export default async function AdPage({ params }) {
 
   return (
     <div className="mx-auto max-w-5xl">
+      {/* ثبت بازدید فقط برای آگهی فعال و یک‌بار در مرورگر (FE-01) */}
+      {ad.status === 'active' && <ViewCounter adId={String(ad._id)} />}
+
       {/* بنر وضعیت بررسی (فقط مالک/ادمین این صفحه را در این وضعیت می‌بینند) */}
       {ad.status === 'pending' && (
         <div className="mb-4 flex items-center gap-2 rounded-2xl bg-orange-50 px-4 py-3 text-sm text-orange-700">

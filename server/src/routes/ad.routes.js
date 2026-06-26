@@ -221,17 +221,13 @@ router.get('/:id/similar', async (req, res, next) => {
   }
 });
 
-// جزئیات آگهی
+// جزئیات آگهی (بدون افزایش بازدید — خواندن خالص؛ شمارش بازدید جدا شد — FE-01)
 router.get('/:id', optionalAuth, async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id))
       return res.status(400).json({ message: 'شناسه نامعتبر' });
 
-    const ad = await Ad.findByIdAndUpdate(
-      req.params.id,
-      { $inc: { views: 1 } },
-      { new: true }
-    )
+    const ad = await Ad.findById(req.params.id)
       .populate('category', 'name slug icon')
       .populate('owner', 'name city')
       .lean();
@@ -247,6 +243,20 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
     }
 
     res.json({ ad });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ثبت بازدید — فقط یک‌بار از مرورگر کاربر هنگام باز شدن صفحه فراخوانی می‌شود (FE-01).
+// جدا از خواندن تا fetch متادیتا/SSR/بات بازدید را دوبار/اشتباه نشمارد.
+router.post('/:id/view', async (req, res, next) => {
+  try {
+    if (!mongoose.isValidObjectId(req.params.id))
+      return res.status(400).json({ message: 'شناسه نامعتبر' });
+    // فقط آگهی فعال بازدید می‌گیرد (آگهی در حال بررسی شمارش نمی‌شود)
+    await Ad.updateOne({ _id: req.params.id, status: 'active' }, { $inc: { views: 1 } });
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }
