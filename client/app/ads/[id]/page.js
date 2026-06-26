@@ -6,6 +6,7 @@ import AdMap from '../../../components/AdMap';
 import ContactBox from './ContactBox';
 import Gallery from './Gallery';
 import ReportButton from '../../../components/ReportButton';
+import ShareButton from '../../../components/ShareButton';
 import SimilarAds from './SimilarAds';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
@@ -224,7 +225,10 @@ export default async function AdPage({ params }) {
               <p className="text-sm text-gray-400">
                 👁 {Number(ad.views || 0).toLocaleString('fa-IR')} بازدید · شناسه آگهی: {ad._id.slice(-8)}
               </p>
-              <ReportButton adId={String(ad._id)} ownerId={String(ownerId)} />
+              <div className="flex items-center gap-1">
+                <ShareButton title={ad.title} />
+                <ReportButton adId={String(ad._id)} ownerId={String(ownerId)} />
+              </div>
             </div>
 
             <div className="rounded-xl bg-amber-50 p-4 text-sm leading-7 text-amber-800">
