@@ -1,12 +1,17 @@
 /**
- * منطق مشترک CORS برای Express و Socket.io
- * مجاز:
- *  - CLIENT_ORIGIN از env (می‌تواند چندتایی با کاما باشد)
- *  - localhost / 127.0.0.1 با هر پورتی
- *  - IPهای شبکه خصوصی (192.168.x.x / 10.x.x.x / 172.16-31.x.x) با هر پورتی
- *    → دسترسی از گوشی روی همان وای‌فای بدون تنظیم اضافه
- * در پروداکشن، دامنه واقعی را در CLIENT_ORIGIN بگذارید.
+ * منطق مشترک CORS برای Express و Socket.io (SEC-06)
+ * ----------------------------------------------------------------------------
+ * پروداکشن (NODE_ENV=production):
+ *   فقط origin(های) دقیقِ CLIENT_ORIGIN مجازند (می‌تواند چندتایی با کاما باشد).
+ *   هیچ localhost/IP خصوصی مجاز نیست. این برای حالت credentials:true حیاتی است
+ *   (با کوکی HttpOnly در SEC-04) تا origin مهاجم نتواند با کوکی کاربر درخواست بزند.
+ *
+ * توسعه:
+ *   علاوه بر CLIENT_ORIGIN، localhost/127.0.0.1 و IPهای شبکهٔ خصوصی با هر پورتی
+ *   مجازند تا تست از گوشی روی همان وای‌فای ساده باشد.
  */
+const isProd = process.env.NODE_ENV === 'production';
+
 const envOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:3000')
   .split(',')
   .map((s) => s.trim())
@@ -16,9 +21,17 @@ const PRIVATE_HOST =
   /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d+)?$/;
 
 export function isAllowedOrigin(origin) {
-  if (!origin) return true; // curl / همان‌مبدا
+  // درخواست بدون Origin: same-origin مرورگر، curl، اپ موبایل، SSR.
+  // اینها CORS با credentials از مرورگرِ سایت دیگر نیستند، پس بی‌خطرند.
+  if (!origin) return true;
+
+  // در هر محیطی، origin(های) دقیقِ env مجازند
   if (envOrigins.includes(origin)) return true;
-  return PRIVATE_HOST.test(origin);
+
+  // localhost/IP خصوصی فقط در توسعه
+  if (!isProd && PRIVATE_HOST.test(origin)) return true;
+
+  return false;
 }
 
 export const corsOptions = {
