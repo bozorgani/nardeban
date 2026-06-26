@@ -73,7 +73,7 @@ function ConversationList({ conversations, activeId, onPick, onlineMap }) {
                 <div className="h-full w-full overflow-hidden rounded-xl bg-gray-100">
                   {c.ad?.images?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imgUrl(c.ad.images[0])} alt="" className="h-full w-full object-cover" />
+                    <img src={imgUrl(c.ad.images[0])} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xl">📦</div>
                   )}
@@ -372,7 +372,7 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
             <div className="h-full w-full overflow-hidden rounded-xl bg-gray-100">
               {conv.ad?.images?.[0] ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={imgUrl(conv.ad.images[0])} alt="" className="h-full w-full object-cover" />
+                <img src={imgUrl(conv.ad.images[0])} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-lg">📦</div>
               )}
@@ -490,7 +490,7 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
         <div className="flex items-center gap-3 border-t border-gray-100 bg-white px-4 pt-3">
           <div className="relative">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={imagePreview} alt="" className="h-16 w-16 rounded-xl border border-gray-200 object-cover" />
+            <img src={imagePreview} alt="" className="h-16 w-16 rounded-xl border border-gray-200 object-cover" decoding="async" />
             <button
               type="button"
               onClick={clearImage}

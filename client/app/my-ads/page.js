@@ -155,7 +155,7 @@ export default function MyAdsPage() {
                   <Link href={`/ads/${ad._id}`} className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-2xl bg-gray-100">
                     {img ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={img} alt="" className="h-full w-full object-cover" />
+                      <img src={img} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                     ) : (
                       <span className="flex h-full w-full items-center justify-center text-3xl opacity-60">
                         {ad.category?.icon || '📦'}

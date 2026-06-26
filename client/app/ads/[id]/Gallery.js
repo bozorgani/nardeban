@@ -26,6 +26,8 @@ export default function Gallery({ images = [], title, icon }) {
           src={imgUrl(images[active])}
           alt={title}
           className="h-full w-full object-contain"
+          fetchPriority="high"
+          decoding="async"
         />
 
         {images.length > 1 && (
@@ -68,7 +70,7 @@ export default function Gallery({ images = [], title, icon }) {
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imgUrl(img)} alt="" className="h-full w-full object-cover" />
+              <img src={imgUrl(img)} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
             </button>
           ))}
         </div>

@@ -28,7 +28,16 @@ export default function AdCard({ ad }) {
       <div className="h-32 w-32 flex-shrink-0 self-center overflow-hidden rounded-md bg-gray-100">
         {img ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={img} alt={ad.title} className="h-full w-full object-cover" loading="lazy" />
+          <img
+            src={img}
+            alt={ad.title}
+            className="h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+          />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-200 text-4xl opacity-70">
             {ad.category?.icon || '📦'}

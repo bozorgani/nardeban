@@ -202,7 +202,7 @@ function AdsTab({ initialStatus = '', onPendingChange }) {
                 <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
                   {ad.images?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imgUrl(ad.images[0])} alt="" className="h-full w-full object-cover" />
+                    <img src={imgUrl(ad.images[0])} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center text-xl opacity-60">{ad.category?.icon || '📦'}</span>
                   )}
@@ -509,7 +509,7 @@ function ReportsTab({ onCountChange }) {
                 <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
                   {g.ad?.images?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imgUrl(g.ad.images[0])} alt="" className="h-full w-full object-cover" />
+                    <img src={imgUrl(g.ad.images[0])} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center text-xl opacity-50">🗑️</span>
                   )}

@@ -31,6 +31,29 @@ button {
   font-family: inherit;
 }
 
+/* دسترسی‌پذیری: حلقهٔ فوکوس واضح برای کاربران کیبورد (UX-11) */
+/* فقط هنگام ناوبری با کیبورد نمایش داده می‌شود، نه با کلیک ماوس */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role='button']:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+.dark a:focus-visible,
+.dark button:focus-visible,
+.dark input:focus-visible,
+.dark select:focus-visible,
+.dark textarea:focus-visible,
+.dark [role='button']:focus-visible,
+.dark [tabindex]:focus-visible {
+  outline-color: #f87171;
+}
+
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;

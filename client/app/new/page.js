@@ -308,7 +308,7 @@ export default function NewAdWizard() {
                       }`}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={src} alt="" className={`h-full w-full object-cover ${tooBig ? 'opacity-50' : ''}`} />
+                      <img src={src} alt="" decoding="async" className={`h-full w-full object-cover ${tooBig ? 'opacity-50' : ''}`} />
                       {tooBig && (
                         <span className="absolute inset-0 flex items-center justify-center">
                           <span className="rounded-md bg-red-500/90 px-1.5 py-0.5 text-[8px] font-bold text-white shadow">
