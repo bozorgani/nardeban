@@ -7,6 +7,7 @@ import { api, formatPrice, timeAgo, imgUrl } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../components/Toast';
 import AdChats from './AdChats';
+import { ListRowSkeleton, HeaderSkeleton } from '../../components/Skeleton';
 
 const STATUS = {
   pending: { label: 'در انتظار تایید', dot: 'bg-orange-400', chip: 'bg-orange-50 text-orange-600' },
@@ -81,7 +82,12 @@ export default function MyAdsPage() {
   };
 
   if (loading || !user || ads === null)
-    return <p className="py-16 text-center text-gray-400">در حال بارگذاری...</p>;
+    return (
+      <div className="mx-auto max-w-3xl">
+        <HeaderSkeleton />
+        <ListRowSkeleton count={4} />
+      </div>
+    );
 
   const filtered = tab === 'all' ? ads : ads.filter((a) => a.status === tab);
   const countOf = (t) => (t === 'all' ? ads.length : ads.filter((a) => a.status === t).length);

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { api, timeAgo } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../components/Toast';
+import { ListRowSkeleton, HeaderSkeleton } from '../../components/Skeleton';
 
 function searchUrl(s) {
   const sp = new URLSearchParams();
@@ -70,7 +71,12 @@ export default function SavedSearchesPage() {
   };
 
   if (loading || !user || !data)
-    return <p className="py-16 text-center text-gray-400">در حال بارگذاری...</p>;
+    return (
+      <div className="mx-auto max-w-3xl">
+        <HeaderSkeleton />
+        <ListRowSkeleton count={4} />
+      </div>
+    );
 
   return (
     <div className="mx-auto max-w-2xl">

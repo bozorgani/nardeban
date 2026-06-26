@@ -7,6 +7,7 @@ import { useAuth } from '../../lib/AuthContext';
 import { usePush } from '../../lib/usePush';
 import { api, CITIES } from '../../lib/api';
 import { useToast } from '../../components/Toast';
+import { SkeletonBox } from '../../components/Skeleton';
 
 /* ---------- آیکون‌های SVG ---------- */
 const Icon = {
@@ -182,7 +183,23 @@ export default function MePage() {
     });
   }, [user]);
 
-  if (loading) return <p className="py-16 text-center text-gray-400">در حال بارگذاری...</p>;
+  if (loading)
+    return (
+      <div className="mx-auto max-w-md">
+        <div className="overflow-hidden rounded-3xl border border-gray-100 bg-white">
+          <SkeletonBox className="h-40 rounded-none" />
+          <div className="space-y-3 p-6">
+            <SkeletonBox className="h-5 w-1/2" />
+            <SkeletonBox className="h-4 w-1/3" />
+            <div className="grid grid-cols-3 gap-3 pt-2">
+              <SkeletonBox className="h-16" />
+              <SkeletonBox className="h-16" />
+              <SkeletonBox className="h-16" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
 
   /* ---- حالت مهمان ---- */
   if (!user) {

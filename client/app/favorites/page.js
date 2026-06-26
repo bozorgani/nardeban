@@ -7,6 +7,7 @@ import { api } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import AdCard from '../../components/AdCard';
 import { useToast } from '../../components/Toast';
+import { AdGridSkeleton, HeaderSkeleton } from '../../components/Skeleton';
 
 export default function FavoritesPage() {
   const { user, loading, refresh } = useAuth();
@@ -35,7 +36,12 @@ export default function FavoritesPage() {
   };
 
   if (loading || !user || favs === null)
-    return <p className="py-16 text-center text-gray-400">در حال بارگذاری...</p>;
+    return (
+      <div className="mx-auto max-w-5xl">
+        <HeaderSkeleton />
+        <AdGridSkeleton count={6} />
+      </div>
+    );
 
   return (
     <div className="mx-auto max-w-5xl">
