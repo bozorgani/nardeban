@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import Category from '../models/Category.js';
-import { CATEGORY_FIELDS, findRootSlug } from '../config/category-fields.js';
+import { fieldsForChain, slugChainFor } from '../config/category-fields.js';
 
 const router = Router();
 
@@ -28,17 +28,17 @@ router.get('/', async (_req, res, next) => {
   }
 });
 
-// فیلدهای اختصاصی یک دسته: ?slug=light-cars یا ?id=<categoryId>
+// فیلدهای اختصاصی یک دسته: ?slug=laptops یا ?id=<categoryId>
+// فیلدها از کل زنجیرهٔ ریشه→دسته ترکیب (merge) می‌شوند (ارث‌بری per-subcategory).
 router.get('/fields', async (req, res, next) => {
   try {
-    let rootSlug = null;
-    if (req.query.slug) {
-      const cat = await Category.findOne({ slug: req.query.slug }).lean();
-      if (cat) rootSlug = cat.parent ? await findRootSlug(Category, cat._id) : cat.slug;
-    } else if (req.query.id) {
-      rootSlug = await findRootSlug(Category, req.query.id);
-    }
-    res.json({ rootSlug, fields: CATEGORY_FIELDS[rootSlug] || [] });
+    const chain = await slugChainFor(Category, {
+      id: req.query.id || null,
+      slug: req.query.slug || null,
+    });
+    const fields = fieldsForChain(chain);
+    // rootSlug برای سازگاری عقب‌رو + chain برای دیباگ/کلاینت
+    res.json({ rootSlug: chain[0] || null, chain, fields });
   } catch (err) {
     next(err);
   }
