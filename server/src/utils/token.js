@@ -32,13 +32,28 @@ export function getTokenFromReq(req) {
   return null;
 }
 
-/** گزینه‌های کوکی توکن (Secure فقط در پروداکشن). */
+/** گزینه‌های کوکی توکن.
+ * secure و sameSite از env قابل تنظیم‌اند تا با حالت استقرار هماهنگ شوند:
+ *   - HTTPS و same-origin (پشت nginx): COOKIE_SECURE=true ، COOKIE_SAMESITE=lax  (پیش‌فرض پروداکشن)
+ *   - موقتاً روی HTTP بدون SSL:        COOKIE_SECURE=false  (وگرنه مرورگر کوکی را ذخیره نمی‌کند)
+ *   - فرانت و API روی دامنهٔ متفاوت:    COOKIE_SAMESITE=none ، COOKIE_SECURE=true
+ */
 export function tokenCookieOptions() {
   const isProd = process.env.NODE_ENV === 'production';
+
+  // پیش‌فرض secure = در پروداکشن true، مگر اینکه صراحتاً COOKIE_SECURE=false شود
+  let secure = isProd;
+  if (process.env.COOKIE_SECURE === 'true') secure = true;
+  else if (process.env.COOKIE_SECURE === 'false') secure = false;
+
+  // SameSite قابل تنظیم؛ none نیاز به secure=true دارد (الزام مرورگر)
+  const sameSite = (process.env.COOKIE_SAMESITE || 'lax').toLowerCase();
+  if (sameSite === 'none') secure = true;
+
   return {
     httpOnly: true,
-    secure: isProd, // در توسعه روی http کار کند
-    sameSite: 'lax',
+    secure,
+    sameSite,
     path: '/',
     maxAge: 30 * 24 * 3600 * 1000, // ۳۰ روز
   };
