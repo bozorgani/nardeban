@@ -85,7 +85,7 @@ function SearchBar() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="جستجو در همهٔ آگهی‌ها..."
-            className="w-full rounded-xl border border-gray-200 bg-gray-100 py-2.5 pr-10 pl-3 text-sm outline-none transition focus:border-brand focus:bg-white"
+            className="w-full rounded-xl border border-gray-200 bg-gray-100 py-2.5 pr-10 pl-9 text-sm outline-none transition focus:border-brand focus:bg-white"
           />
           <button
             type="submit"
@@ -97,6 +97,25 @@ function SearchBar() {
               <path d="m21 21-4.3-4.3" />
             </svg>
           </button>
+          {/* دکمهٔ پاک‌کردن جستجو (UX-05) — فقط وقتی متنی هست */}
+          {q && (
+            <button
+              type="button"
+              aria-label="پاک‌کردن جستجو"
+              onClick={() => {
+                setQ('');
+                const sp = new URLSearchParams(params.toString());
+                sp.delete('q');
+                sp.delete('page');
+                router.push(`/?${sp.toString()}`);
+              }}
+              className="absolute left-2.5 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-gray-300 text-white transition hover:bg-gray-400"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                <path d="M18 6 6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* دکمه شهر — موبایل و دسکتاپ، باز کردن مودال کامل */}
