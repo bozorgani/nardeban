@@ -34,10 +34,23 @@ export function isAllowedOrigin(origin) {
   return false;
 }
 
+// هشدار یک‌بار برای هر origin ناشناخته (کمک به دیباگ تنظیم CLIENT_ORIGIN)
+const warnedOrigins = new Set();
+
 export const corsOptions = {
   origin(origin, cb) {
     if (isAllowedOrigin(origin)) return cb(null, true);
-    cb(new Error('CORS: مبدا مجاز نیست'));
+    // به‌جای throw (که خطای ۵۰۰ می‌داد)، origin را رد می‌کنیم؛ مرورگر خودش بلاک می‌کند.
+    if (origin && !warnedOrigins.has(origin)) {
+      warnedOrigins.add(origin);
+      console.warn(
+        `⚠️ CORS: origin «${origin}» مجاز نیست. اگر این دامنهٔ واقعی سایت است، ` +
+          `آن را در CLIENT_ORIGIN (در server/.env) قرار دهید. مقدار فعلی: ${
+            process.env.CLIENT_ORIGIN || '(تنظیم نشده)'
+          }`
+      );
+    }
+    cb(null, false);
   },
   credentials: true,
 };
