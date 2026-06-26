@@ -1,11 +1,9 @@
 /**
- * آدرس بک‌اند (API):
+ * آدرس بک‌اند (API) — از متغیر NEXT_PUBLIC_API_URL خوانده می‌شود.
  *
- * فرانت روی Vercel و بک‌اند روی Render اجرا می‌شوند، پس API روی یک دامنه‌ی
- * جدا است. این آدرس از متغیر NEXT_PUBLIC_API_URL خوانده می‌شود.
- *
- *  - پروداکشن (Vercel): در تنظیمات Vercel → NEXT_PUBLIC_API_URL = https://nardeban.onrender.com
- *  - توسعه‌ی محلی:       در client/.env.local → NEXT_PUBLIC_API_URL = http://localhost:4000
+ *  - پروداکشن (پشت nginx روی سرور خودتان): origin دامنه بدون /api،
+ *      مثلاً NEXT_PUBLIC_API_URL=https://yourdomain.com  (کد خودش /api و /uploads و /socket.io را اضافه می‌کند)
+ *  - توسعه‌ی محلی: در client/.env.local → NEXT_PUBLIC_API_URL = http://localhost:4000
  *
  * هوشمند: در توسعه، اگر سایت با IP شبکه باز شده ولی env به localhost اشاره دارد،
  * خودکار hostname را جایگزین می‌کند (دسترسی از گوشی روی وای‌فای).

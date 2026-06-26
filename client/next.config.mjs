@@ -33,9 +33,9 @@ const nextConfig = {
       // عکس‌ها وقتی سایت با IP شبکه باز شده
       { protocol: 'http', hostname: '192.168.*.*', port: '4000', pathname: '/uploads/**' },
       { protocol: 'http', hostname: '10.*.*.*', port: '4000', pathname: '/uploads/**' },
-      // پروداکشن: بک‌اند روی Render (https://your-app.onrender.com)
-      { protocol: 'https', hostname: '*.onrender.com', pathname: '/uploads/**' },
-      { protocol: 'https', hostname: '*.railway.app', pathname: '/uploads/**' },
+      // پروداکشن: عکس‌ها از همان دامنه پشت nginx سرو می‌شوند (/uploads/**).
+      // اگر بعداً از next/image استفاده کردید، دامنهٔ واقعی خود را اینجا اضافه کنید:
+      // { protocol: 'https', hostname: 'yourdomain.com', pathname: '/uploads/**' },
     ],
   },
 

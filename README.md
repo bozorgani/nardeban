@@ -6,7 +6,7 @@
 
 ```
 nardeban/
-├── server/          # بک‌اند مستقل → deploy روی Render / Railway
+├── server/          # بک‌اند (Express + Socket.io)
 │   ├── src/
 │   │   ├── index.js           # نقطه‌ی ورود (Express + Socket.io)
 │   │   ├── app.js             # فکتوری ساخت اپ Express
@@ -17,7 +17,7 @@ nardeban/
 │   │   └── socket.js          # چت Real-time
 │   ├── uploads/               # عکس‌های آپلودشده
 │   └── package.json
-└── client/          # فرانت مستقل → deploy روی Vercel
+└── client/          # فرانت (Next.js)
     ├── app/                    # Next.js App Router
     │   ├── page.js             # صفحه اصلی
     │   ├── ads/[id]/           # جزئیات آگهی
@@ -70,34 +70,47 @@ npm run dev                 # http://localhost:3000
 | کاربر عادی | `09120000000` | ثبت آگهی، چت |
 | ادمین 👑 | `09110000000` | پنل مدیریت |
 
-## 🚀 Deploy
+## 🚀 استقرار روی سرور Ubuntu
 
-### بک‌اند → Render
+این پروژه برای اجرا روی **سرور شخصی Ubuntu** پیکربندی شده: سرویس‌ها با Docker اجرا
+می‌شوند و **nginx** (نصب‌شده مستقیم روی Ubuntu) جلوی آن‌ها می‌نشیند.
 
-1. در [render.com](https://render.com) یک **Web Service** جدید بسازید
-2. به این repo متصل کنید، **Root Directory = `server`**
-3. تنظیمات:
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-   - **Environment Variables:**
-     ```
-     MONGO_URI=mongodb+srv://...   ← از MongoDB Atlas
-     JWT_SECRET=your-secret
-     CLIENT_ORIGIN=https://your-app.vercel.app  ← بعد از deploy فرانت
-     ```
-4. Render خودش `PORT` را تنظیم می‌کند.
+### ۱) سرویس‌ها با Docker
+```bash
+cp .env.example .env          # مقادیر را تنظیم کنید (رمز Mongo، دامنه/آدرس عمومی)
+cp server/.env.example server/.env   # JWT_SECRET، sms.ir، COOKIE_SECURE و...
+docker compose up -d --build
+# backend روی 127.0.0.1:4000 و frontend روی 127.0.0.1:3000 و mongo داخلی
+```
 
-### فرانت → Vercel
+> اگر MongoDB Atlas دارید، می‌توانید سرویس `mongodb` را حذف و `MONGO_URI` را به Atlas بدهید.
 
-1. در [vercel.com](https://vercel.com) یک پروژه‌ی جدید بسازید
-2. به این repo متصل کنید، **Root Directory = `client`**
-3. **Environment Variables:**
-   ```
-   NEXT_PUBLIC_API_URL=https://your-app.onrender.com  ← آدرس Render
-   ```
-4. Deploy — تمام!
+### ۲) nginx (روی خود Ubuntu)
+```bash
+sudo apt install -y nginx
+sudo cp nginx/nardeban-ratelimit.conf /etc/nginx/conf.d/
+sudo cp nginx/nardeban.conf /etc/nginx/sites-available/nardeban
+sudo ln -s /etc/nginx/sites-available/nardeban /etc/nginx/sites-enabled/nardeban
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+```
+جزئیات کامل (دو حالت اجرا، SSL با certbot، تمدید خودکار) در `docs/NGINX-SSL.md`.
 
-> **نکته:** آدرس Render را در `CLIENT_ORIGIN` سرور و آدرس فرانت را در `NEXT_PUBLIC_API_URL` کلاینت بگذارید (CORS).
+### ۳) متغیرهای مهم
+- `server/.env`: `JWT_SECRET` (الزامی)، `CLIENT_ORIGIN=https://yourdomain.com`،
+  `SMS_PROVIDER=smsir` + کلیدها، و `COOKIE_SECURE` (روی HTTP بدون SSL = `false`).
+- `.env` (ریشه، برای compose): `NEXT_PUBLIC_API_URL=https://yourdomain.com` **بدون `/api`**
+  (کد خودش `/api`، `/uploads`، `/socket.io` را اضافه می‌کند).
+
+### ۴) SSL
+```bash
+sudo apt install -y certbot python3-certbot-nginx
+sudo certbot --nginx -d yourdomain.com   # 443 + ریدایرکت + تمدید خودکار
+```
+بعد از SSL، در `server/.env` مقدار `COOKIE_SECURE=true` بگذارید.
+
+> فایل‌های آپلودی: روی والیوم Docker `uploads_data` (پایدار). جزئیات و مسیر مهاجرت به
+> S3 در `docs/UPLOADS.md`. ساخت ادمین: مقدار `role:"admin"` در دیتابیس (راهنما در همان داک‌ها).
 
 ## تکنولوژی‌ها
 

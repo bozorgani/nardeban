@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "نردبان — بک‌اند مستقل (Express + MongoDB + Socket.io) برای deploy روی Render",
+  "description": "نردبان — بک‌اند (Express + MongoDB + Socket.io) برای استقرار روی سرور Ubuntu",
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",

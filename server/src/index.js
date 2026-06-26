@@ -1,7 +1,7 @@
 /**
  * 🪜 نردبان — سرور بک‌اند مستقل (Express + Socket.io)
  *
- * نقطه‌ی ورود بک‌اند برای deploy روی Render / Railway / هر long-running host.
+ * نقطه‌ی ورود بک‌اند (استقرار روی سرور Ubuntu — با Docker یا مستقیم Node/PM2).
  * - /api/*    → Express API (auth, ads, categories, chat, ...)
  * - /uploads  → فایل‌های آپلودشده (با کش طولانی)
  * - Socket.io → چت Real-time روی همان پورت
@@ -10,8 +10,8 @@
  *   npm run dev          → نیاز به MongoDB (MONGO_URI در .env)
  *   npm run dev:memory   → MongoDB درون‌حافظه‌ای + seed (بدون نصب MongoDB)
  *
- * اجرای پروداکشن (Render):
- *   npm start            → node src/index.js
+ * اجرای پروداکشن:
+ *   npm start            → node src/index.js  (پشت nginx)
  */
 import 'dotenv/config';
 import http from 'http';
