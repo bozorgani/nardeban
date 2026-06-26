@@ -11,7 +11,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import mongoSanitize from 'express-mongo-sanitize';
+import { sanitizeRequest } from './middleware/sanitize.js';
 import { globalLimiter, otpLimiter, verifyLimiter, writeLimiter } from './middleware/limiters.js';
 import { corsOptions } from './config/cors.js';
 import { UPLOAD_DIR } from './config/paths.js';
@@ -52,13 +52,8 @@ export function createApp() {
   );
   app.use(cors(corsOptions));
 
-  // پاکسازی اپراتورهای مونگو ($ و .) از ورودی‌ها — ضد NoSQL injection
-  // (نوآپراژن است: اگر req.body نباشد کاری نمی‌کند)
-  app.use((req, _res, next) => {
-    if (req.body) mongoSanitize.sanitize(req.body);
-    if (req.params) mongoSanitize.sanitize(req.params);
-    next();
-  });
+  // پاکسازی اپراتورهای مونگو ($ و .) از body، params و query — ضد NoSQL injection (SEC-09)
+  app.use(sanitizeRequest);
 
   // پارس بدنه‌ی JSON فقط برای مسیرهای API (تا با body صفحات Next تداخل نکند)
   app.use('/api', express.json({ limit: '2mb' }));
