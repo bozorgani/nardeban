@@ -7,6 +7,7 @@ import { api, API_URL, digitsOnly } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../components/Toast';
 import CategoryFields from '../../components/CategoryFields';
+import Spinner from '../../components/Spinner';
 
 const MapPicker = dynamic(() => import('../../components/MapPicker'), {
   ssr: false,
@@ -619,9 +620,10 @@ export default function NewAdWizard() {
               type="button"
               onClick={submit}
               disabled={busy}
-              className="rounded-xl bg-brand px-8 py-2.5 text-sm font-bold text-white transition hover:bg-brand-dark disabled:opacity-50"
+              className="flex items-center gap-2 rounded-xl bg-brand px-8 py-2.5 text-sm font-bold text-white transition hover:bg-brand-dark disabled:opacity-50"
             >
-              {busy ? 'در حال ثبت...' : '✓ ثبت نهایی آگهی'}
+              {busy && <Spinner />}
+              {busy ? 'در حال ثبت و آپلود عکس...' : '✓ ثبت نهایی آگهی'}
             </button>
           )}
         </div>

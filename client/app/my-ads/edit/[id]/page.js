@@ -8,6 +8,7 @@ import { api, API_URL, digitsOnly, imgUrl } from '../../../../lib/api';
 import { useAuth } from '../../../../lib/AuthContext';
 import { useToast } from '../../../../components/Toast';
 import CategoryFields from '../../../../components/CategoryFields';
+import Spinner from '../../../../components/Spinner';
 
 const MapPicker = dynamic(() => import('../../../../components/MapPicker'), {
   ssr: false,
@@ -368,8 +369,9 @@ export default function EditAdPage({ params }) {
 
         <div className="flex gap-2 border-t border-gray-100 pt-5">
           <button onClick={save} disabled={busy}
-            className="flex-1 rounded-2xl bg-brand py-3.5 font-bold text-white shadow-lg shadow-brand/25 transition hover:bg-brand-dark disabled:opacity-50">
-            {busy ? 'در حال ذخیره...' : '✓ ذخیره تغییرات'}
+            className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-brand py-3.5 font-bold text-white shadow-lg shadow-brand/25 transition hover:bg-brand-dark disabled:opacity-50">
+            {busy && <Spinner />}
+            {busy ? 'در حال ذخیره و آپلود...' : '✓ ذخیره تغییرات'}
           </button>
           <Link href="/my-ads" className="rounded-2xl border border-gray-200 px-6 py-3.5 text-gray-500 transition hover:border-gray-300">
             انصراف
