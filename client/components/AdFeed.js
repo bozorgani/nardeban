@@ -12,15 +12,61 @@ import { API_URL } from '../lib/api';
  *  - IntersectionObserver با rootMargin بزرگ → قبل از رسیدن کاربر لود می‌شود (بدون مکث)
  *  - جلوگیری از درخواست تکراری + dedupe آگهی‌ها + دکمه تلاش مجدد در خطا
  */
+// کلید کش فید per query در sessionStorage (UX-07)
+const cacheKey = (query) => `feed:${query || 'home'}`;
+
 export default function AdFeed({ initialAds, total, pages, query }) {
-  const [ads, setAds] = useState(initialAds);
-  const [page, setPage] = useState(1);
+  // اگر برای همین query اسنپ‌شات کش‌شده داریم (بازگشت از صفحهٔ آگهی) → بازیابی فوری
+  const restored =
+    typeof window !== 'undefined'
+      ? (() => {
+          try {
+            const raw = sessionStorage.getItem(cacheKey(query));
+            return raw ? JSON.parse(raw) : null;
+          } catch {
+            return null;
+          }
+        })()
+      : null;
+
+  const [ads, setAds] = useState(restored?.ads?.length ? restored.ads : initialAds);
+  const [page, setPage] = useState(restored?.page || 1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const sentinelRef = useRef(null);
   const loadingRef = useRef(false); // گارد همزمانی (state async است)
 
   const hasMore = page < pages;
+
+  // ذخیرهٔ اسنپ‌شات فید + موقعیت اسکرول هنگام ترک صفحه (کلیک روی آگهی)
+  useEffect(() => {
+    const save = () => {
+      try {
+        sessionStorage.setItem(
+          cacheKey(query),
+          JSON.stringify({ ads, page, scrollY: window.scrollY })
+        );
+      } catch {
+        /* سهمیهٔ sessionStorage پر است — بی‌خیال */
+      }
+    };
+    // قبل از ناوبری/بستن، ذخیره کن
+    window.addEventListener('pagehide', save);
+    return () => {
+      save();
+      window.removeEventListener('pagehide', save);
+    };
+  }, [ads, page, query]);
+
+  // بازیابی موقعیت اسکرول پس از mount (اگر از کش بازگشتیم)
+  useEffect(() => {
+    if (restored?.scrollY) {
+      // بعد از رندر شدن کارت‌ها اسکرول را برگردان
+      requestAnimationFrame(() => window.scrollTo(0, restored.scrollY));
+    }
+    // فقط یک‌بار هنگام mount
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const loadMore = useCallback(async () => {
     if (loadingRef.current || page >= pages) return;
