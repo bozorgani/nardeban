@@ -28,6 +28,13 @@ router.post('/request-otp', async (req, res, next) => {
     const code = generateOtp(); // کد ۶ رقمی امن (SEC-07)
     const expires = new Date(Date.now() + 5 * 60 * 1000);
 
+    // چاپ کد خام در لاگ سرور (برای دیباگ) — قبل از هش‌شدن.
+    // فقط در غیرپروداکشن، یا اگر صراحتاً LOG_OTP=true باشد (دیباگ موقت).
+    // ⚠️ در پروداکشن این را روشن نگذارید؛ کد در لاگ‌ها امن نیست.
+    if (!isProd || process.env.LOG_OTP === 'true') {
+      console.log(`🔑 [OTP] کد ${phone}: ${code}  (انقضا: ${expires.toLocaleTimeString('fa-IR')})`);
+    }
+
     await User.findOneAndUpdate(
       { phone },
       {
