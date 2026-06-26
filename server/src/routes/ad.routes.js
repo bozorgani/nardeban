@@ -44,18 +44,19 @@ router.get('/', async (req, res, next) => {
 
     const filter = { status: 'active' };
 
-    if (q && q.trim()) {
-      // جستجوی regex: زیررشته‌ها و کلمات ناقص فارسی را هم پیدا می‌کند
-      const words = normalizeFa(q).split(/\s+/).filter(Boolean).slice(0, 6);
-      if (words.length) {
-        filter.$and = words.map((w) => ({
+    // جستجوی متن به‌صورت hybrid (DB-01):
+    //  ۱) ابتدا $text (ایندکس‌محور و سریع) — برای کلمات کامل
+    //  ۲) اگر نتیجه‌ای نداشت، fallback به regex (زیررشته/کلمهٔ ناقص فارسی)
+    // شرط regex را اینجا آماده می‌کنیم تا در صورت نیاز استفاده شود.
+    const words = q && q.trim() ? normalizeFa(q).split(/\s+/).filter(Boolean).slice(0, 6) : [];
+    const regexAnd = words.length
+      ? words.map((w) => ({
           $or: [
             { title: { $regex: flexible(w), $options: 'i' } },
             { description: { $regex: flexible(w), $options: 'i' } },
           ],
-        }));
-      }
-    }
+        }))
+      : null;
     if (city) {
       // پشتیبانی چند شهر: city=تهران,کاشان,اصفهان
       const cities = String(city).split(',').map((c) => normalizeFa(c)).filter(Boolean);
@@ -110,17 +111,38 @@ router.get('/', async (req, res, next) => {
       expensive: { price: -1 },
     };
 
-    const [ads, total] = await Promise.all([
-      Ad.find(filter)
-        .sort(sortMap[sort] || sortMap.newest)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        // فقط فیلدهای لازم برای کارت — payload سبک‌تر در لیست‌های بزرگ
-        .select('title price isFree city neighborhood images condition createdAt category attrs')
-        .populate('category', 'name slug icon')
-        .lean(),
-      Ad.countDocuments(filter),
-    ]);
+    const SELECT = 'title price isFree city neighborhood images condition createdAt category attrs';
+    const sortSpec = sortMap[sort] || sortMap.newest;
+
+    // اجرای کوئری با یک filter مشخص
+    const run = (f) =>
+      Promise.all([
+        Ad.find(f)
+          .sort(sortSpec)
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .select(SELECT)
+          .populate('category', 'name slug icon')
+          .lean(),
+        Ad.countDocuments(f),
+      ]);
+
+    let ads, total;
+    if (regexAnd) {
+      // ۱) تلاش با $text (ایندکس‌محور). عبارت را با گیومه می‌سازیم تا منطق AND حفظ شود.
+      const phrase = words.map((w) => `"${w}"`).join(' ');
+      const textFilter = { ...filter, $text: { $search: phrase } };
+      [ads, total] = await run(textFilter);
+
+      // ۲) اگر $text چیزی نیافت (کلمهٔ ناقص/زیررشته فارسی)، fallback به regex
+      if (total === 0) {
+        const regexFilter = { ...filter };
+        regexFilter.$and = [...(regexFilter.$and || []), ...regexAnd];
+        [ads, total] = await run(regexFilter);
+      }
+    } else {
+      [ads, total] = await run(filter);
+    }
 
     // فقط عکس اول برای کارت لازم است (کاهش حجم پاسخ)
     for (const ad of ads) {
