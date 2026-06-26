@@ -647,8 +647,11 @@ function ChatPageInner() {
 
   return (
     <div className="mx-auto max-w-7xl">
-      {/* ارتفاع تقریباً تمام‌صفحه: هدر ~64px + پدینگ. در موبایل جای BottomNav هم حساب شده */}
-      <div className="grid h-[calc(100dvh-160px)] min-h-[520px] grid-cols-1 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm md:h-[calc(100dvh-128px)] md:grid-cols-[360px_1fr]">
+      {/* موبایل: تمام‌صفحه (escape از پدینگ main با منفی‌مارجین) — فقط پیام‌ها اسکرول می‌خورند (موارد ۹ و ۱۰)
+          دسکتاپ: کارت با ارتفاع تقریباً تمام‌صفحه و گوشهٔ گرد */}
+      <div className="grid grid-cols-1 overflow-hidden bg-white shadow-sm
+                      -mx-4 -mt-6 -mb-24 h-[calc(100dvh-64px)]
+                      md:mx-0 md:mt-0 md:mb-0 md:h-[calc(100dvh-128px)] md:min-h-[520px] md:rounded-2xl md:border md:border-gray-200 md:grid-cols-[360px_1fr]">
         <div className={`overflow-y-auto border-l border-gray-100 ${activeId ? 'hidden md:block' : ''}`}>
           <ConversationList
             conversations={conversations}

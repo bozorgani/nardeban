@@ -60,6 +60,9 @@ export default function BottomNav() {
 
   const isActive = (href) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
+  // در صفحهٔ چت (تمام‌صفحه در موبایل) نوار پایین مخفی می‌شود تا روی ورودی پیام نیفتد (موارد ۹،۱۰)
+  if (pathname.startsWith('/chat')) return null;
+
   return (
     <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
       <div className="grid grid-cols-5">
