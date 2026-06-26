@@ -282,6 +282,23 @@ export default function MePage() {
         </div>
       </div>
 
+      {/* راهنمای کاربر تازه: اگر هیچ آگهی فعال/فروخته ندارد → دعوت به ثبت اولین آگهی (UX-03) */}
+      {stats && (stats.active || 0) === 0 && (stats.sold || 0) === 0 && (
+        <div className="rounded-3xl border border-dashed border-brand/30 bg-brand-light/40 p-6 text-center">
+          <span className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-3xl shadow-sm">📢</span>
+          <p className="mt-3 font-extrabold text-gray-800">اولین آگهی‌ات را ثبت کن</p>
+          <p className="mt-1 text-sm leading-7 text-gray-500">
+            تا چند دقیقهٔ دیگر می‌توانی کالا یا خدماتت را به هزاران نفر نشان بدهی.
+          </p>
+          <Link
+            href="/new"
+            className="mt-4 inline-block rounded-2xl bg-brand px-7 py-3 text-sm font-extrabold text-white shadow-lg shadow-brand/25 transition hover:bg-brand-dark"
+          >
+            ➕ ثبت آگهی رایگان
+          </Link>
+        </div>
+      )}
+
       {/* منو */}
       <div className="divide-y divide-gray-50 overflow-hidden rounded-3xl border border-gray-200 bg-white">
         {user.role === 'admin' && (
