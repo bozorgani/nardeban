@@ -233,7 +233,7 @@
 
 ## 🟧 بخش F — تمیزکاری کد و وابستگی‌ها
 
-### [ ] CL-01 🟠 رفع آسیب‌پذیری‌های وابستگی (`npm audit`)
+### [x] CL-01 🟠 رفع آسیب‌پذیری‌های وابستگی (npm audit → 0) ✅ انجام شد (کامیت `4f4e0cd`)
 - **محل:** `server/`, `client/`
 - **مشکل:** سرور ۳ مورد high (`ws` via socket.io)؛ کلاینت ۲ high + ۲ moderate (`ws`, `postcss`).
 - **کار:** `npm audit fix` (موارد `ws` بدون breaking)؛ به‌روزرسانی socket.io/next در صورت نیاز؛ تست build بعد از آپدیت.
