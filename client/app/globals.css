@@ -21,6 +21,7 @@ body {
   color: #1f2937;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden; /* جلوگیری از اسکرول افقی ناخواسته در موبایل (مورد ۵) */
 }
 
 /* اعداد فارسی یکدست‌تر */

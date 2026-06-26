@@ -21,6 +21,7 @@ export default function MapPicker({ value, onChange, onCityDetect }) {
   const [results, setResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState('');
 
   const setMarker = useCallback((lat, lng, fly = true) => {
     const L = LRef.current;
@@ -54,12 +55,16 @@ export default function MapPicker({ value, onChange, onCityDetect }) {
     async (lat, lng) => {
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=fa&zoom=12`
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&accept-language=fa&zoom=10&addressdetails=1`,
+          { headers: { 'Accept-Language': 'fa' } }
         );
         const data = await res.json();
+        const a = data.address || {};
+        // ترتیب fallback گسترده‌تر — بعضی شهرها زیر county/state/region می‌آیند
         const city =
-          data.address?.city || data.address?.town || data.address?.village || data.address?.county || '';
-        if (city) onCityDetect?.(city.replace('شهرستان ', '').trim());
+          a.city || a.town || a.village || a.municipality || a.county ||
+          a.state_district || a.state || a.region || '';
+        if (city) onCityDetect?.(String(city).replace(/^شهرستان\s*/, '').replace(/^استان\s*/, '').trim());
       } catch {
         /* آفلاین/خطا — مهم نیست */
       }
@@ -116,12 +121,12 @@ export default function MapPicker({ value, onChange, onCityDetect }) {
       setSearching(true);
       try {
         const res = await fetch(
-          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
-            query + ' ایران'
-          )}&format=json&accept-language=fa&limit=5`
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}` +
+            `&format=jsonv2&accept-language=fa&countrycodes=ir&limit=6&addressdetails=1`,
+          { headers: { 'Accept-Language': 'fa' } }
         );
         const data = await res.json();
-        setResults(data);
+        setResults(Array.isArray(data) ? data : []);
       } catch {
         setResults([]);
       } finally {
@@ -142,7 +147,16 @@ export default function MapPicker({ value, onChange, onCityDetect }) {
   };
 
   const myLocation = () => {
-    if (!navigator.geolocation) return;
+    setGeoError('');
+    // geolocation فقط در بافت امن (HTTPS یا localhost) کار می‌کند
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      setGeoError('برای «موقعیت من» باید سایت روی HTTPS باشد. فعلاً روی نقشه کلیک کنید یا شهر را جستجو کنید.');
+      return;
+    }
+    if (!navigator.geolocation) {
+      setGeoError('مرورگر شما موقعیت‌یابی را پشتیبانی نمی‌کند.');
+      return;
+    }
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -152,7 +166,14 @@ export default function MapPicker({ value, onChange, onCityDetect }) {
         onChange?.({ lat, lng });
         reverseGeocode(lat, lng);
       },
-      () => setLocating(false),
+      (err) => {
+        setLocating(false);
+        setGeoError(
+          err.code === 1
+            ? 'دسترسی به موقعیت رد شد. از تنظیمات مرورگر اجازه دهید یا روی نقشه کلیک کنید.'
+            : 'موقعیت پیدا نشد. لطفاً روی نقشه کلیک کنید یا شهر را جستجو کنید.'
+        );
+      },
       { enableHighAccuracy: true, timeout: 8000 }
     );
   };
@@ -212,6 +233,10 @@ export default function MapPicker({ value, onChange, onCityDetect }) {
           </div>
         )}
       </div>
+
+      {geoError && (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs leading-6 text-amber-700">⚠️ {geoError}</p>
+      )}
 
       {value?.lat && (
         <p className="text-xs text-gray-400" dir="ltr">
