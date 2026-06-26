@@ -4,14 +4,15 @@ import SavedSearch from '../models/SavedSearch.js';
 import Ad from '../models/Ad.js';
 import Category from '../models/Category.js';
 import { requireAuth } from '../middleware/auth.js';
+import { buildCategoryIndex } from '../utils/categories.js';
 
 const router = Router();
 router.use(requireAuth);
 
 const MAX_SAVED = 10;
 
-/* ساخت فیلتر مونگو از یک جستجوی ذخیره‌شده (هم‌راستا با /api/ads) */
-async function buildFilter(s) {
+/* بخش غیر-دسته‌ایِ فیلتر (همیشه همگام) */
+function baseFilter(s) {
   const filter = { status: 'active' };
 
   if (s.query?.trim()) {
@@ -26,19 +27,6 @@ async function buildFilter(s) {
     if (cities.length === 1) filter.city = cities[0];
     else if (cities.length > 1) filter.city = { $in: cities };
   }
-  if (s.category) {
-    const cat = await Category.findOne({ slug: s.category });
-    if (cat) {
-      const ids = [cat._id];
-      let frontier = [cat._id];
-      while (frontier.length) {
-        const children = await Category.find({ parent: { $in: frontier } }).select('_id');
-        frontier = children.map((c) => c._id);
-        ids.push(...frontier);
-      }
-      filter.category = { $in: ids };
-    }
-  }
   if (s.minPrice != null || s.maxPrice != null) {
     filter.price = {};
     if (s.minPrice != null) filter.price.$gte = s.minPrice;
@@ -51,6 +39,38 @@ async function buildFilter(s) {
   return filter;
 }
 
+/**
+ * ساخت فیلتر مونگو از یک جستجوی ذخیره‌شده (هم‌راستا با /api/ads).
+ * @param {object} s  سند جستجوی ذخیره‌شده
+ * @param {object} [catIndex]  ایندکس دسته‌بندیِ از پیش‌ساخته (BE-05). اگر داده شود،
+ *   نوادگان دسته از حافظه resolve می‌شوند (بدون کوئری per جستجو → رفع N+1).
+ *   اگر داده نشود، fallback به BFS دیتابیس (برای سازگاری با notifier).
+ */
+async function buildFilter(s, catIndex = null) {
+  const filter = baseFilter(s);
+
+  if (s.category) {
+    let ids = null;
+    if (catIndex) {
+      ids = catIndex.descendantIdsBySlug(s.category); // از حافظه
+    } else {
+      const cat = await Category.findOne({ slug: s.category });
+      if (cat) {
+        ids = [cat._id];
+        let frontier = [cat._id];
+        while (frontier.length) {
+          const children = await Category.find({ parent: { $in: frontier } }).select('_id');
+          frontier = children.map((c) => c._id);
+          ids.push(...frontier);
+        }
+      }
+    }
+    if (ids && ids.length) filter.category = { $in: ids };
+  }
+
+  return filter;
+}
+
 // لیست جستجوهای من + تعداد آگهی جدید هر کدام
 router.get('/', async (req, res, next) => {
   try {
@@ -58,9 +78,12 @@ router.get('/', async (req, res, next) => {
       .sort({ createdAt: -1 })
       .lean();
 
+    // ایندکس دسته‌بندی یک‌بار ساخته می‌شود (رفع N+1 — BE-05)
+    const catIndex = await buildCategoryIndex();
+
     const withCounts = await Promise.all(
       searches.map(async (s) => {
-        const filter = await buildFilter(s);
+        const filter = await buildFilter(s, catIndex);
         filter.createdAt = { $gt: s.lastCheckedAt };
         const newCount = await Ad.countDocuments(filter);
         return { ...s, newCount };
@@ -78,12 +101,18 @@ router.get('/', async (req, res, next) => {
 router.get('/new-count', async (req, res, next) => {
   try {
     const searches = await SavedSearch.find({ user: req.user._id }).lean();
-    let total = 0;
-    for (const s of searches) {
-      const filter = await buildFilter(s);
-      filter.createdAt = { $gt: s.lastCheckedAt };
-      total += await Ad.countDocuments(filter);
-    }
+    if (!searches.length) return res.json({ total: 0 });
+
+    // ایندکس یک‌بار + شمارش‌های موازی (رفع N+1 و حلقهٔ ترتیبی — BE-05)
+    const catIndex = await buildCategoryIndex();
+    const counts = await Promise.all(
+      searches.map(async (s) => {
+        const filter = await buildFilter(s, catIndex);
+        filter.createdAt = { $gt: s.lastCheckedAt };
+        return Ad.countDocuments(filter);
+      })
+    );
+    const total = counts.reduce((sum, n) => sum + n, 0);
     res.json({ total });
   } catch (err) {
     next(err);
