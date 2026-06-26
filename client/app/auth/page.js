@@ -16,6 +16,7 @@ export default function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [timer, setTimer] = useState(0);
   const codeRef = useRef(null);
+  const submittingRef = useRef(false); // گارد همزمانی قطعی (state ناهمگام است) — UX-04
 
   // شمارش معکوس ارسال مجدد
   useEffect(() => {
@@ -30,6 +31,8 @@ export default function AuthPage() {
 
   const requestOtp = async (e) => {
     e?.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setError('');
     setBusy(true);
     try {
@@ -42,11 +45,14 @@ export default function AuthPage() {
       setError(err.message);
     } finally {
       setBusy(false);
+      submittingRef.current = false; // برای مرحلهٔ بعد (verify) آزاد می‌شود
     }
   };
 
   const verify = async (e) => {
     e?.preventDefault();
+    if (submittingRef.current) return; // جلوگیری قطعی از ارسال دوباره (auto-submit + کلیک همزمان)
+    submittingRef.current = true;
     setError('');
     setBusy(true);
     try {
@@ -59,12 +65,13 @@ export default function AuthPage() {
     } catch (err) {
       setError(err.message);
       setBusy(false);
+      submittingRef.current = false; // اجازهٔ تلاش مجدد فقط در صورت خطا
     }
   };
 
   // تایید خودکار وقتی ۶ رقم کامل شد
   useEffect(() => {
-    if (step === 2 && digitsOnly(code).length === 6 && !busy) verify();
+    if (step === 2 && digitsOnly(code).length === 6 && !submittingRef.current) verify();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [code]);
 
@@ -141,7 +148,7 @@ export default function AuthPage() {
               </button>
 
               <div className="flex items-center justify-between text-xs">
-                <button type="button" onClick={() => { setStep(1); setError(''); }} className="text-gray-400 hover:text-brand">
+                <button type="button" onClick={() => { setStep(1); setError(''); submittingRef.current = false; }} className="text-gray-400 hover:text-brand">
                   ← تغییر شماره
                 </button>
                 {timer > 0 ? (
