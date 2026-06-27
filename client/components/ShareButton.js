@@ -8,7 +8,7 @@
 import { useState } from 'react';
 import { useToast } from './Toast';
 
-export default function ShareButton({ title = 'آگهی در نردبان' }) {
+export default function ShareButton({ title = 'آگهی در بفروش' }) {
   const toast = useToast();
   const [copied, setCopied] = useState(false);
 

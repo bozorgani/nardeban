@@ -11,14 +11,14 @@ import PushSubscription from './models/PushSubscription.js';
  * متغیرها:
  *   VAPID_PUBLIC_KEY   کلید عمومی
  *   VAPID_PRIVATE_KEY  کلید خصوصی
- *   VAPID_SUBJECT      mailto:you@example.com  (پیش‌فرض: mailto:admin@nardeban.example)
+ *   VAPID_SUBJECT      mailto:you@example.com  (پیش‌فرض: mailto:admin@befrosh.ir)
  *
  * اگر کلیدها تنظیم نشده باشند، Web Push به‌صورت بی‌صدا غیرفعال می‌شود (بدون کرش)
  * و sendPushToUser کاری انجام نمی‌دهد.
  */
 export const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY?.trim() || '';
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY?.trim() || '';
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT?.trim() || 'mailto:admin@nardeban.example';
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT?.trim() || 'mailto:admin@befrosh.ir';
 
 let configured = false;
 

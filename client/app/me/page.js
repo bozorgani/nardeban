@@ -210,7 +210,7 @@ export default function MePage() {
             <span className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-white/15 text-white backdrop-blur">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3v18M16 3v18M8 7h8M8 12h8M8 17h8"/></svg>
             </span>
-            <h1 className="mt-4 text-xl font-black text-white">به نردبان خوش آمدید</h1>
+            <h1 className="mt-4 text-xl font-black text-white">به بفروش خوش آمدید</h1>
             <p className="mt-2 text-sm leading-7 text-white/80">
               برای ثبت آگهی، چت با فروشندگان و نشان‌کردن آگهی‌ها وارد شوید.
             </p>
@@ -244,7 +244,7 @@ export default function MePage() {
               {(user.name || 'ن').charAt(0)}
             </span>
             <div className="min-w-0 flex-1 text-white">
-              <h1 className="truncate text-lg font-extrabold">{user.name || 'کاربر نردبان'}</h1>
+              <h1 className="truncate text-lg font-extrabold">{user.name || 'کاربر بفروش'}</h1>
               <p className="text-sm text-white/75" dir="ltr">{user.phone}</p>
             </div>
             <button
@@ -326,13 +326,13 @@ export default function MePage() {
       </button>
 
       <div className="flex items-center justify-center gap-4 pb-2 text-[11px] text-gray-400">
-        <Link href="/about" className="hover:text-brand">دربارهٔ نردبان</Link>
+        <Link href="/about" className="hover:text-brand">دربارهٔ بفروش</Link>
         <span className="text-gray-200">|</span>
         <Link href="/terms" className="hover:text-brand">قوانین</Link>
         <span className="text-gray-200">|</span>
         <Link href="/support" className="hover:text-brand">پشتیبانی</Link>
       </div>
-      <p className="pb-2 text-center text-[11px] text-gray-300">نردبان · نسخه ۱.۰</p>
+      <p className="pb-2 text-center text-[11px] text-gray-300">بفروش · نسخه ۱.۰</p>
 
       <EditProfileSheet
         user={user}

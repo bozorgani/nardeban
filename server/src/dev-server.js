@@ -19,7 +19,7 @@ const { SAMPLE_ADS } = await import('./config/sample-ads.js');
 const slugMap = await seedCategories(Category);
 const demoUser = await User.create({ phone: '09120000000', name: 'کاربر نمونه', city: 'تهران' });
 // 👑 ادمین دمو: 09110000000
-await User.create({ phone: '09110000000', name: 'مدیر نردبان', city: 'تهران', role: 'admin' });
+await User.create({ phone: '09110000000', name: 'مدیر بفروش', city: 'تهران', role: 'admin' });
 
 await Ad.insertMany(
   SAMPLE_ADS.map((a) => ({

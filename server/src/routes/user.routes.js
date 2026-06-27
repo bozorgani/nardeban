@@ -135,7 +135,7 @@ router.get('/:id/profile', optionalAuth, async (req, res, next) => {
     res.json({
       seller: {
         id: seller._id,
-        name: seller.name || 'کاربر نردبان',
+        name: seller.name || 'کاربر بفروش',
         city: seller.city,
         memberSince: seller.createdAt,
       },
@@ -185,7 +185,7 @@ router.get('/:id/reviews', async (req, res, next) => {
         rating: r.rating,
         comment: r.comment,
         createdAt: r.createdAt,
-        raterName: r.rater?.name || 'کاربر نردبان',
+        raterName: r.rater?.name || 'کاربر بفروش',
       })),
       total,
       pages: Math.ceil(total / limit),

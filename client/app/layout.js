@@ -20,12 +20,12 @@ import BottomNav from '../components/BottomNav';
 import PWA from '../components/PWA';
 
 export const metadata = {
-  title: 'نردبان | نیازمندی‌های رایگان',
+  title: 'بفروش | نیازمندی‌های رایگان',
   description: 'خرید و فروش، استخدام، املاک و خودرو — شبیه دیوار',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    title: 'نردبان',
+    title: 'بفروش',
     statusBarStyle: 'default',
   },
   icons: {

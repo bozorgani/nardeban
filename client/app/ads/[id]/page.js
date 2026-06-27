@@ -37,7 +37,7 @@ export async function generateMetadata({ params }) {
   const { id } = await params;
   try {
     const ad = await getAd(id); // همان fetch مشترک (بدون درخواست اضافه)
-    if (!ad) return { title: 'آگهی یافت نشد | نردبان' };
+    if (!ad) return { title: 'آگهی یافت نشد | بفروش' };
 
     const priceText = ad.isFree
       ? 'رایگان'
@@ -45,7 +45,7 @@ export async function generateMetadata({ params }) {
         ? `${Number(ad.price).toLocaleString('fa-IR')} تومان`
         : 'توافقی';
 
-    const title = `${ad.title} — ${priceText} | نردبان`;
+    const title = `${ad.title} — ${priceText} | بفروش`;
     const description = `${ad.title} در ${ad.city}${ad.neighborhood ? `، ${ad.neighborhood}` : ''} — ${priceText}. ${ad.description?.slice(0, 140) || ''}`;
 
     return {
@@ -64,7 +64,7 @@ export async function generateMetadata({ params }) {
       },
     };
   } catch {
-    return { title: 'نردبان | نیازمندی‌های رایگان' };
+    return { title: 'بفروش | نیازمندی‌های رایگان' };
   }
 }
 
@@ -112,7 +112,7 @@ export default async function AdPage({ params }) {
 
       {/* بردکرامب */}
       <nav className="mb-5 flex items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm text-gray-400">
-        <Link href="/" className="hover:text-brand">نردبان</Link>
+        <Link href="/" className="hover:text-brand">بفروش</Link>
         <span>›</span>
         <Link href={`/?city=${encodeURIComponent(ad.city)}`} className="hover:text-brand">{ad.city}</Link>
         <span>›</span>
@@ -216,7 +216,7 @@ export default async function AdPage({ params }) {
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block text-base font-bold text-gray-800">
-                  {ad.owner?.name || 'کاربر نردبان'}
+                  {ad.owner?.name || 'کاربر بفروش'}
                 </span>
                 <span className="block text-sm text-gray-400">
                   مشاهده پروفایل و همهٔ آگهی‌ها

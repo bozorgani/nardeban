@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { createPortal } from 'react-dom';
 
 /**
- * سیستم اعلان سراسری نردبان (بدون کتابخانه):
+ * سیستم اعلان سراسری بفروش (بدون کتابخانه):
  *   const toast = useToast();
  *   toast.success('ثبت شد');  toast.error('خطا');  toast.info('...')
  *   const ok = await toast.confirm({ title, message, confirmText, danger });

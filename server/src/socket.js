@@ -141,7 +141,7 @@ export function initSocket(httpServer) {
             Ad.findById(conv.ad).select('title').lean(),
           ]);
           sendPushToUser(otherId, {
-            title: `پیام جدید از ${sender?.name || 'کاربر نردبان'}`,
+            title: `پیام جدید از ${sender?.name || 'کاربر بفروش'}`,
             body: body.length > 80 ? body.slice(0, 80) + '…' : body,
             tag: `conv-${convId}`, // پیام‌های یک گفتگو روی هم جایگزین شوند
             url: `/chat?c=${convId}`,

@@ -169,7 +169,7 @@ async function createMessage({ conv, user, text = '', image = '' }) {
   if (!isUserOnline(otherId)) {
     const ad = await Ad.findById(conv.ad).select('title').lean();
     sendPushToUser(otherId, {
-      title: `پیام جدید از ${user.name || 'کاربر نردبان'}`,
+      title: `پیام جدید از ${user.name || 'کاربر بفروش'}`,
       body: text ? (text.length > 80 ? text.slice(0, 80) + '…' : text) : '📷 یک عکس فرستاد',
       tag: `conv-${convId}`,
       url: `/chat?c=${convId}`,

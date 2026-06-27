@@ -47,8 +47,8 @@ export async function generateMetadata({ searchParams }) {
     parts.push(cities.length === 1 ? `در ${cities[0]}` : `در ${cities.length} شهر`);
   }
   const title = parts.length
-    ? `${parts.join(' ')} | نردبان`
-    : 'نردبان | نیازمندی‌های رایگان سراسر ایران';
+    ? `${parts.join(' ')} | بفروش`
+    : 'بفروش | نیازمندی‌های رایگان سراسر ایران';
   return { title, description: 'خرید و فروش، استخدام، املاک و خودرو — آگهی‌های دست دوم و نو' };
 }
 

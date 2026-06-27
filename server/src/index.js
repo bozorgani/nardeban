@@ -1,5 +1,5 @@
 /**
- * 🪜 نردبان — سرور بک‌اند مستقل (Express + Socket.io)
+ * 🪜 بفروش — سرور بک‌اند مستقل (Express + Socket.io)
  *
  * نقطه‌ی ورود بک‌اند (استقرار روی سرور Ubuntu — با Docker یا مستقیم Node/PM2).
  * - /api/*    → Express API (auth, ads, categories, chat, ...)
@@ -27,7 +27,7 @@ initSocket(server); // ⚡ چت Real-time
 
 const start = () =>
   server.listen(PORT, "0.0.0.0", () => {
-    console.log(`🚀 نردبان API + Socket.io روی http://0.0.0.0:${PORT}`);
+    console.log(`🚀 بفروش API + Socket.io روی http://0.0.0.0:${PORT}`);
     startSavedSearchNotifier();
   });
 

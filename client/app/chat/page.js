@@ -85,8 +85,8 @@ function ConversationList({ conversations, activeId, onPick, onlineMap }) {
 
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-sm font-bold text-gray-800" title={c.other?.name || 'کاربر نردبان'}>
-                    {c.other?.name || 'کاربر نردبان'}
+                  <span className="min-w-0 flex-1 truncate text-sm font-bold text-gray-800" title={c.other?.name || 'کاربر بفروش'}>
+                    {c.other?.name || 'کاربر بفروش'}
                   </span>
                   <span className={`flex-shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
                     c.role === 'seller' ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600'
@@ -386,7 +386,7 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
               {conv.ad?.title}
             </p>
             <p className="text-xs text-gray-400">
-              {priceText} · {conv.other?.name || 'کاربر نردبان'}
+              {priceText} · {conv.other?.name || 'کاربر بفروش'}
               {' · '}
               {otherTyping ? (
                 <span className="font-bold text-brand">در حال نوشتن...</span>

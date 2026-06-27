@@ -32,7 +32,7 @@ function ChatLink() {
     <Link
       href="/chat"
       className="relative flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-2.5 text-sm transition hover:border-gray-300"
-      title="چت نردبان"
+      title="چت بفروش"
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
@@ -167,7 +167,7 @@ export default function Header() {
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
             <path d="M8 3v18M16 3v18M8 7h8M8 12h8M8 17h8" />
           </svg>
-          <span className="hidden sm:inline">نردبان</span>
+          <span className="hidden sm:inline">بفروش</span>
         </Link>
 
         <Suspense fallback={<div className="flex-1" />}>
@@ -201,7 +201,7 @@ export default function Header() {
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-light text-xs font-black text-brand">
                   {(user.name || 'ن').charAt(0)}
                 </span>
-                <span className="hidden max-w-24 truncate sm:inline">{user.name || 'نردبان من'}</span>
+                <span className="hidden max-w-24 truncate sm:inline">{user.name || 'بفروش من'}</span>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`text-gray-400 transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`}>
                   <path d="m6 9 6 6 6-6" />
                 </svg>
@@ -219,7 +219,7 @@ export default function Header() {
                         {(user.name || 'ن').charAt(0)}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-extrabold text-white">{user.name || 'کاربر نردبان'}</span>
+                        <span className="block truncate text-sm font-extrabold text-white">{user.name || 'کاربر بفروش'}</span>
                         <span className="block text-[11px] text-white/70" dir="ltr">{user.phone}</span>
                       </span>
                       <span className="rounded-lg bg-white/15 px-2 py-1 text-[10px] font-bold text-white">پروفایل ◀</span>

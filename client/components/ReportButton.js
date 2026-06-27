@@ -51,7 +51,7 @@ export default function ReportButton({ adId, ownerId }) {
       setOpen(false);
       setReason('');
       setDetails('');
-      toast.success('گزارش شما ثبت شد و توسط تیم نردبان بررسی می‌شود', {
+      toast.success('گزارش شما ثبت شد و توسط تیم بفروش بررسی می‌شود', {
         title: '🛡️ ممنون از همراهی شما',
         duration: 5000,
       });

@@ -573,7 +573,7 @@ export default function NewAdWizard() {
                 <input type="checkbox" checked={callEnabled} onChange={(e) => setCallEnabled(e.target.checked)} className="h-4 w-4 accent-[#a62626]" />
               </label>
               <label className="flex cursor-pointer items-center justify-between rounded-xl border border-gray-200 px-4 py-3 transition hover:border-gray-300">
-                <span className="flex items-center gap-2">💬 چت در نردبان</span>
+                <span className="flex items-center gap-2">💬 چت در بفروش</span>
                 <input type="checkbox" checked={chatEnabled} onChange={(e) => setChatEnabled(e.target.checked)} className="h-4 w-4 accent-[#a62626]" />
               </label>
             </div>

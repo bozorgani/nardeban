@@ -1,5 +1,5 @@
 /* ------------------------------------------------------------------
- * نردبان — Service Worker (PWA)
+ * بفروش — Service Worker (PWA)
  * استراتژی‌ها:
  *  - استاتیک‌های Next (/_next/static): Cache-First (immutable hash دارند)
  *  - آیکون‌ها و منیفست: Cache-First
@@ -8,10 +8,10 @@
  *  - API: همیشه Network-Only (داده زنده) — هرگز کش نمی‌شود
  * ------------------------------------------------------------------ */
 
-const VERSION = 'v1';
-const STATIC_CACHE = `nardeban-static-${VERSION}`;
-const PAGE_CACHE = `nardeban-pages-${VERSION}`;
-const IMG_CACHE = `nardeban-imgs-${VERSION}`;
+const VERSION = 'v2';
+const STATIC_CACHE = `befrosh-static-${VERSION}`;
+const PAGE_CACHE = `befrosh-pages-${VERSION}`;
+const IMG_CACHE = `befrosh-imgs-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
 const IMG_LIMIT = 60;
 
@@ -40,7 +40,7 @@ self.addEventListener('activate', (event) => {
       .then((keys) =>
         Promise.all(
           keys
-            .filter((k) => k.startsWith('nardeban-') && !k.endsWith(VERSION))
+            .filter((k) => k.startsWith('befrosh-') && !k.endsWith(VERSION))
             .map((k) => caches.delete(k))
         )
       )
@@ -59,15 +59,15 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: 'نردبان', body: event.data ? event.data.text() : '' };
+    data = { title: 'بفروش', body: event.data ? event.data.text() : '' };
   }
 
-  const title = data.title || 'نردبان';
+  const title = data.title || 'بفروش';
   const options = {
     body: data.adTitle ? `${data.body}\n📦 ${data.adTitle}` : data.body || '',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-96.png',
-    tag: data.tag || 'nardeban', // پیام‌های یک گفتگو روی هم جایگزین می‌شوند
+    tag: data.tag || 'befrosh', // پیام‌های یک گفتگو روی هم جایگزین می‌شوند
     renotify: true,
     dir: 'rtl',
     lang: 'fa',

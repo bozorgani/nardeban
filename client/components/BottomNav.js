@@ -55,7 +55,7 @@ export default function BottomNav() {
     { href: '/favorites', label: 'نشان‌ها', icon: 'heart' },
     { href: '/new', label: 'ثبت آگهی', icon: 'plus', primary: true },
     { href: '/chat', label: 'چت و تماس', icon: 'chat', badge: unread },
-    { href: '/me', label: 'نردبان من', icon: 'user' },
+    { href: '/me', label: 'بفروش من', icon: 'user' },
   ];
 
   const isActive = (href) => (href === '/' ? pathname === '/' : pathname.startsWith(href));

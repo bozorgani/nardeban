@@ -684,7 +684,7 @@ export default function AdminPage() {
     <div className="mx-auto max-w-5xl">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-extrabold text-gray-900">👑 پنل مدیریت نردبان</h1>
+          <h1 className="text-xl font-extrabold text-gray-900">👑 پنل مدیریت بفروش</h1>
           <p className="mt-0.5 text-sm text-gray-400">خوش آمدید، {user.name}</p>
         </div>
         {/* دسترسی سریع شخصی */}

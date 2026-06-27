@@ -84,7 +84,7 @@ export default function AuthPage() {
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 3v18M16 3v18M8 7h8M8 12h8M8 17h8"/></svg>
           </span>
           <h1 className="mt-3 text-lg font-black text-white">
-            {step === 1 ? 'ورود به نردبان' : 'کد تایید'}
+            {step === 1 ? 'ورود به بفروش' : 'کد تایید'}
           </h1>
           <p className="mt-1 text-xs text-white/75">
             {step === 1 ? 'با شماره موبایل وارد شوید' : (
@@ -121,7 +121,7 @@ export default function AuthPage() {
                 {busy ? 'در حال ارسال...' : 'دریافت کد تایید'}
               </button>
               <p className="text-center text-[11px] leading-6 text-gray-400">
-                ورود شما به معنای پذیرش قوانین نردبان است.
+                ورود شما به معنای پذیرش قوانین بفروش است.
               </p>
             </form>
           ) : (

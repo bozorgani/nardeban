@@ -20,7 +20,7 @@ async function run() {
   // 👑 ادمین: 09110000000 (در پروداکشن شماره خودتان را بگذارید)
   await User.findOneAndUpdate(
     { phone: '09110000000' },
-    { phone: '09110000000', name: 'مدیر نردبان', city: 'تهران', role: 'admin' },
+    { phone: '09110000000', name: 'مدیر بفروش', city: 'تهران', role: 'admin' },
     { upsert: true }
   );
 

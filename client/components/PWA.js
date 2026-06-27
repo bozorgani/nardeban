@@ -81,7 +81,7 @@ export default function PWA() {
       {waitingSW && (
         <div className="fixed inset-x-3 top-3 z-[80] mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3.5 shadow-xl">
           <span className="text-xl">🔄</span>
-          <p className="flex-1 text-sm font-bold text-gray-800">نسخهٔ جدید نردبان آماده است</p>
+          <p className="flex-1 text-sm font-bold text-gray-800">نسخهٔ جدید بفروش آماده است</p>
           <button
             onClick={() => waitingSW.postMessage('SKIP_WAITING')}
             className="rounded-xl bg-brand px-4 py-2 text-xs font-bold text-white"
@@ -94,9 +94,9 @@ export default function PWA() {
       {/* بنر نصب */}
       {showInstall && (
         <div className="fixed inset-x-3 bottom-20 z-[80] mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-xl md:bottom-6">
-          <img src="/icons/icon-96.png" alt="نردبان" width="48" height="48" className="h-12 w-12 rounded-xl" decoding="async" />
+          <img src="/icons/icon-96.png" alt="بفروش" width="48" height="48" className="h-12 w-12 rounded-xl" decoding="async" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-extrabold text-gray-900">نصب اپلیکیشن نردبان</p>
+            <p className="text-sm font-extrabold text-gray-900">نصب اپلیکیشن بفروش</p>
             <p className="text-xs text-gray-400">سریع‌تر، بدون مرورگر، با پشتیبانی آفلاین</p>
           </div>
           <div className="flex flex-col gap-1.5">

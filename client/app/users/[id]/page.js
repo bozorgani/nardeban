@@ -17,10 +17,10 @@ async function getProfile(id) {
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const data = await getProfile(id);
-  if (!data) return { title: 'کاربر یافت نشد | نردبان' };
+  if (!data) return { title: 'کاربر یافت نشد | بفروش' };
   return {
-    title: `آگهی‌های ${data.seller.name} | نردبان`,
-    description: `${data.totalAds} آگهی فعال از ${data.seller.name} در نردبان`,
+    title: `آگهی‌های ${data.seller.name} | بفروش`,
+    description: `${data.totalAds} آگهی فعال از ${data.seller.name} در بفروش`,
   };
 }
 
@@ -74,7 +74,7 @@ export default async function SellerProfilePage({ params }) {
     <div className="mx-auto max-w-5xl">
       {/* بردکرامب */}
       <nav className="mb-5 flex items-center gap-1.5 text-sm text-gray-400">
-        <Link href="/" className="hover:text-brand">نردبان</Link>
+        <Link href="/" className="hover:text-brand">بفروش</Link>
         <span>›</span>
         <span className="text-gray-600">پروفایل {seller.name}</span>
       </nav>
