@@ -4,9 +4,24 @@ import { fieldsForChain, slugChainFor } from '../config/category-fields.js';
 
 const router = Router();
 
+// کش in-memory برای پاسخ دسته‌ها (BE-06): دسته‌ها به‌ندرت تغییر می‌کنند،
+// پس به‌جای ساخت درخت ۱۲۸ دسته‌ای در هر درخواست، نتیجه را ۵ دقیقه نگه می‌داریم.
+let _catCache = { at: 0, payload: null };
+const CAT_TTL = 5 * 60 * 1000; // ۵ دقیقه
+export function invalidateCategoryCache() {
+  _catCache = { at: 0, payload: null };
+}
+
 // خروجی: لیست تخت (flat) + درخت چندسطحی (tree)
 router.get('/', async (_req, res, next) => {
   try {
+    const now = Date.now();
+    if (_catCache.payload && now - _catCache.at < CAT_TTL) {
+      // کش معتبر — پاسخ فوری (TTFB پایین) + اجازهٔ کش به مرورگر/CDN
+      res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+      return res.json(_catCache.payload);
+    }
+
     const cats = await Category.find().sort({ _id: 1 }).lean();
 
     // ساخت درخت بازگشتی از لیست تخت
@@ -22,7 +37,10 @@ router.get('/', async (_req, res, next) => {
         children: build(String(c._id)),
       }));
 
-    res.json({ categories: cats, tree: build('root') });
+    const payload = { categories: cats, tree: build('root') };
+    _catCache = { at: now, payload };
+    res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=600');
+    res.json(payload);
   } catch (err) {
     next(err);
   }

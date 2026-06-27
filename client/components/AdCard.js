@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { imgUrl, formatPrice, timeAgo } from '../lib/api';
 
-export default function AdCard({ ad }) {
+// priority=true برای کارت‌های بالای صفحه (LCP): تصویر eager + fetchpriority بالا
+export default function AdCard({ ad, priority = false }) {
   const img = ad.images?.[0] ? imgUrl(ad.images[0]) : null;
 
   return (
@@ -32,7 +33,10 @@ export default function AdCard({ ad }) {
             src={img}
             alt={ad.title}
             className="h-full w-full object-cover"
-            loading="lazy"
+            width="128"
+            height="128"
+            loading={priority ? 'eager' : 'lazy'}
+            fetchPriority={priority ? 'high' : 'auto'}
             decoding="async"
             onError={(e) => {
               e.currentTarget.style.display = 'none';

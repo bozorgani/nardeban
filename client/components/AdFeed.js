@@ -122,8 +122,9 @@ export default function AdFeed({ initialAds, total, pages, query }) {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-          {ads.map((ad) => (
-            <AdCard key={ad._id} ad={ad} />
+          {ads.map((ad, i) => (
+            // ۴ کارت اول با اولویت بالا بارگذاری می‌شوند (بهبود LCP موبایل)
+            <AdCard key={ad._id} ad={ad} priority={i < 4} />
           ))}
         </div>
       )}

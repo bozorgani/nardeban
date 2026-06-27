@@ -21,7 +21,9 @@ async function getData(searchParams) {
 
   try {
     const [adsRes, catsRes] = await Promise.all([
-      fetch(`${API}/api/ads?${sp.toString()}`, { cache: 'no-store' }),
+      // صفحهٔ اول آگهی‌ها ۶۰ ثانیه کش می‌شود → TTFB پایین در SSR موبایل.
+      // (آگهی‌های جدیدتر با اسکرول/رفرش بعد از انقضای کش می‌آیند)
+      fetch(`${API}/api/ads?${sp.toString()}`, { next: { revalidate: 60 } }),
       fetch(`${API}/api/categories`, { next: { revalidate: 300 } }),
     ]);
     const adsData = await adsRes.json();

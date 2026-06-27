@@ -11,6 +11,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import { sanitizeRequest } from './middleware/sanitize.js';
 import { globalLimiter, otpLimiter, verifyLimiter, writeLimiter } from './middleware/limiters.js';
 import { corsOptions } from './config/cors.js';
@@ -30,6 +31,9 @@ import seoRoutes from './routes/seo.routes.js';
 export function createApp() {
   const app = express();
   app.set('trust proxy', 1); // پشت Nginx/پروکسی، IP واقعی برای rate-limit
+
+  // فشرده‌سازی gzip/brotli روی پاسخ‌های JSON و HTML — کاهش چشمگیر حجم انتقال و TTFB
+  app.use(compression());
 
   /* ---------- امنیت ---------- */
   // helmet روی پاسخ‌های API/uploads. CSP اصلیِ صفحات HTML در Next.js اعمال می‌شود
