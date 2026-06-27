@@ -8,7 +8,7 @@
  *  - API: همیشه Network-Only (داده زنده) — هرگز کش نمی‌شود
  * ------------------------------------------------------------------ */
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const STATIC_CACHE = `befrosh-static-${VERSION}`;
 const PAGE_CACHE = `befrosh-pages-${VERSION}`;
 const IMG_CACHE = `befrosh-imgs-${VERSION}`;

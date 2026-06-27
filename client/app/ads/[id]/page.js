@@ -225,11 +225,13 @@ export default async function AdPage({ params }) {
               <span className="text-gray-300">◀</span>
             </Link>
 
-            <div className="mb-4 flex items-center justify-between">
-              <p className="text-sm text-gray-400">
-                👁 {Number(ad.views || 0).toLocaleString('fa-IR')} بازدید · شناسه آگهی: {ad._id.slice(-8)}
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-y-2">
+              <p className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-gray-400 sm:text-sm">
+                <span className="whitespace-nowrap">👁 {Number(ad.views || 0).toLocaleString('fa-IR')} بازدید</span>
+                <span className="text-gray-300">·</span>
+                <span className="whitespace-nowrap">شناسه: {ad._id.slice(-8)}</span>
               </p>
-              <div className="flex items-center gap-1">
+              <div className="flex shrink-0 items-center gap-1">
                 <ShareButton title={ad.title} />
                 <ReportButton adId={String(ad._id)} ownerId={String(ownerId)} />
               </div>

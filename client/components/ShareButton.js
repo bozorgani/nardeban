@@ -12,28 +12,62 @@ export default function ShareButton({ title = 'آگهی در بفروش' }) {
   const toast = useToast();
   const [copied, setCopied] = useState(false);
 
+  // کپی با fallback برای بافت غیرامن (HTTP) یا مرورگرهای قدیمی
+  const copyToClipboard = async (text) => {
+    // مسیر مدرن (نیاز به HTTPS/secure context)
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        /* به fallback می‌رویم */
+      }
+    }
+    // fallback قدیمی: textarea مخفی + execCommand
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.position = 'fixed';
+      ta.style.top = '-9999px';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch {
+      return false;
+    }
+  };
+
   const onShare = async () => {
     const url = typeof window !== 'undefined' ? window.location.href : '';
     if (!url) return;
 
-    // Web Share API (عمدتاً موبایل)
+    // Web Share API (عمدتاً موبایل) — لغو کاربر را نباید خطا حساب کنیم
     if (navigator.share) {
       try {
         await navigator.share({ title, url });
         return;
-      } catch {
-        // کاربر لغو کرد یا خطا → ادامه به کپی
+      } catch (err) {
+        // اگر کاربر خودش لغو کرد، هیچ کاری نکن (نه کپی، نه خطا)
+        if (err && err.name === 'AbortError') return;
+        // در غیر این صورت → ادامه به کپی
       }
     }
 
     // fallback: کپی در کلیپ‌بورد
-    try {
-      await navigator.clipboard.writeText(url);
+    const ok = await copyToClipboard(url);
+    if (ok) {
       setCopied(true);
       toast?.success('لینک آگهی کپی شد');
       setTimeout(() => setCopied(false), 2000);
-    } catch {
-      toast?.error('کپی لینک ممکن نشد');
+    } else {
+      // آخرین تلاش: نمایش لینک برای کپی دستی
+      toast?.error('کپی خودکار ممکن نشد — لینک از نوار آدرس کپی کنید');
     }
   };
 
