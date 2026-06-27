@@ -213,6 +213,9 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
       }
     });
 
+    // پیام‌های این گفتگو را خوانده‌شده اعلام کن تا باج چت (هدر/نوار پایین) فوراً صفر شود
+    socket?.emit('msgs:read', { convId: conversationId });
+
     return () => {
       stop = true;
       socket?.emit('typing', { convId: conversationId, isTyping: false });

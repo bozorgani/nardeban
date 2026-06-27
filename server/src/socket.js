@@ -173,8 +173,10 @@ export function initSocket(httpServer) {
       );
       // ریست اتمیک شمارندهٔ نخواندهٔ خوانندهٔ فعلی (BE-02)
       await resetUnreadForReader(conv._id, String(conv.seller) === uid);
-      // به فرستنده‌ها اطلاع بده تیک‌ها دوتایی شود
+      // به فرستنده‌ها (طرف مقابل) اطلاع بده تیک‌ها دوتایی شود
       socket.to(`conv:${convId}`).emit('msgs:read', { convId, readerId: uid });
+      // به همهٔ تب‌های خودِ خواننده هم اطلاع بده تا باج چت (هدر/نوار پایین) به‌روز شود
+      io.to(`user:${uid}`).emit('msgs:read', { convId, readerId: uid });
     });
 
     // ---- قطع اتصال ----

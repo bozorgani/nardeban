@@ -119,15 +119,31 @@ function AdsTab({ initialStatus = '', onPendingChange }) {
     return () => clearTimeout(t);
   }, [load]);
 
+  // گارد ضد دابل‌کلیک: شناسهٔ آگهی‌هایی که درخواستشان در حال پردازش است
+  const [busyIds, setBusyIds] = useState(() => new Set());
+  const isBusy = (id) => busyIds.has(id);
+  const setBusy = (id, on) =>
+    setBusyIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+
   const setAdStatus = async (id, s) => {
+    if (isBusy(id)) return; // جلوگیری از درخواست تکراری
+    setBusy(id, true);
     try {
       await api(`/admin/ads/${id}`, { method: 'PATCH', body: { status: s } });
       toast.success('وضعیت تغییر کرد');
       load();
       onPendingChange?.();
     } catch (err) { toast.error(err.message); }
+    finally { setBusy(id, false); }
   };
   const approveAd = async (id) => {
+    if (isBusy(id)) return; // جلوگیری از تایید دوباره با کلیک دوم
+    setBusy(id, true);
     try {
       await api(`/admin/ads/${id}/approve`, { method: 'POST' });
       toast.success('آگهی تایید و منتشر شد ✅');
@@ -135,12 +151,15 @@ function AdsTab({ initialStatus = '', onPendingChange }) {
       setData((prev) => prev && { ...prev, total: prev.total - 1, ads: prev.ads.filter((a) => a._id !== id) });
       load();
       onPendingChange?.();
-    } catch (err) { toast.error(err.message); }
+    } catch (err) { toast.error(err.message); setBusy(id, false); }
   };
   const [rejecting, setRejecting] = useState(null); // {id, title}
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectBusy, setRejectBusy] = useState(false);
   const doReject = async () => {
+    if (rejectBusy) return; // جلوگیری از ارسال دوبارهٔ دلیل رد
     if (!rejectReason.trim()) return toast.warning('دلیل رد را بنویسید');
+    setRejectBusy(true);
     try {
       await api(`/admin/ads/${rejecting.id}/reject`, { method: 'POST', body: { reason: rejectReason.trim() } });
       toast.success('آگهی رد شد و دلیل برای کاربر ارسال شد');
@@ -150,8 +169,10 @@ function AdsTab({ initialStatus = '', onPendingChange }) {
       load();
       onPendingChange?.();
     } catch (err) { toast.error(err.message); }
+    finally { setRejectBusy(false); }
   };
   const removeAd = async (id) => {
+    if (isBusy(id)) return;
     const ok = await toast.confirm({
       title: 'حذف کامل آگهی',
       message: 'آگهی به همراه همهٔ گفتگوها و پیام‌هایش حذف می‌شود.',
@@ -159,12 +180,14 @@ function AdsTab({ initialStatus = '', onPendingChange }) {
       danger: true,
     });
     if (!ok) return;
+    setBusy(id, true);
     try {
       await api(`/admin/ads/${id}`, { method: 'DELETE' });
       toast.success('آگهی حذف شد');
       load();
       onPendingChange?.();
     } catch (err) { toast.error(err.message); }
+    finally { setBusy(id, false); }
   };
 
   return (
@@ -198,55 +221,75 @@ function AdsTab({ initialStatus = '', onPendingChange }) {
           <p className="text-xs text-gray-400">{Number(data.total).toLocaleString('fa-IR')} آگهی</p>
           <div className="space-y-2.5">
             {data.ads.map((ad) => (
-              <div key={ad._id} className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3">
-                <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
-                  {ad.images?.[0] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imgUrl(ad.images[0])} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-xl opacity-60">{ad.category?.icon || '📦'}</span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-1 text-sm font-bold text-gray-800">{ad.title}</p>
-                  <p className="mt-0.5 text-[11px] text-gray-400">
-                    {formatPrice(ad)} · {ad.city} · {timeAgo(ad.createdAt)} · 👁 {Number(ad.views || 0).toLocaleString('fa-IR')}
-                  </p>
-                  <p className="text-[11px] text-gray-400" dir="ltr">
-                    {ad.owner?.phone} {ad.owner?.isBlocked && '🚫'}
-                  </p>
-                </div>
-                <Link
-                  href={`/ads/${ad._id}`}
-                  target="_blank"
-                  className="flex-shrink-0 rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 transition hover:border-brand hover:text-brand"
-                  title="مشاهده آگهی در تب جدید"
-                >
-                  👁 مشاهده
-                </Link>
-                {ad.status === 'pending' ? (
-                  <div className="flex flex-shrink-0 flex-col gap-1.5 sm:flex-row">
-                    <button onClick={() => approveAd(ad._id)} className="rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-emerald-600">
-                      ✓ تایید
-                    </button>
-                    <button onClick={() => { setRejecting({ id: ad._id, title: ad.title }); setRejectReason(''); }} className="rounded-xl bg-red-50 px-3.5 py-2 text-xs font-bold text-red-500 transition hover:bg-red-100">
-                      ✕ رد
-                    </button>
+              <div key={ad._id} className="rounded-2xl border border-gray-200 bg-white p-3">
+                {/* ردیف اطلاعات آگهی */}
+                <div className="flex items-center gap-3">
+                  <div className="h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl bg-gray-100">
+                    {ad.images?.[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={imgUrl(ad.images[0])} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center text-xl opacity-60">{ad.category?.icon || '📦'}</span>
+                    )}
                   </div>
-                ) : (
-                  <select
-                    value={ad.status}
-                    onChange={(e) => setAdStatus(ad._id, e.target.value)}
-                    className="rounded-xl border border-gray-200 bg-white px-2 py-1.5 text-xs outline-none"
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-1 text-sm font-bold text-gray-800">{ad.title}</p>
+                    <p className="mt-0.5 text-[11px] text-gray-400">
+                      {formatPrice(ad)} · {ad.city} · {timeAgo(ad.createdAt)} · 👁 {Number(ad.views || 0).toLocaleString('fa-IR')}
+                    </p>
+                    <p className="text-[11px] text-gray-400" dir="ltr">
+                      {ad.owner?.phone} {ad.owner?.isBlocked && '🚫'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* ردیف دکمه‌ها — در موبایل به خط بعد می‌روند و سرریز نمی‌شوند */}
+                <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-gray-100 pt-3">
+                  <Link
+                    href={`/ads/${ad._id}`}
+                    target="_blank"
+                    className="rounded-xl border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600 transition hover:border-brand hover:text-brand"
+                    title="مشاهده آگهی در تب جدید"
                   >
-                    {Object.entries(STATUS_FA).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
-                )}
-                <button onClick={() => removeAd(ad._id)} className="rounded-xl px-2.5 py-1.5 text-xs text-red-400 transition hover:bg-red-50 hover:text-red-600">
-                  حذف
-                </button>
+                    👁 مشاهده
+                  </Link>
+                  {ad.status === 'pending' ? (
+                    <>
+                      <button
+                        onClick={() => approveAd(ad._id)}
+                        disabled={isBusy(ad._id)}
+                        className="rounded-xl bg-emerald-500 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {isBusy(ad._id) ? '... در حال تایید' : '✓ تایید'}
+                      </button>
+                      <button
+                        onClick={() => { setRejecting({ id: ad._id, title: ad.title }); setRejectReason(''); }}
+                        disabled={isBusy(ad._id)}
+                        className="rounded-xl bg-red-50 px-3.5 py-2 text-xs font-bold text-red-500 transition hover:bg-red-100 disabled:opacity-50"
+                      >
+                        ✕ رد
+                      </button>
+                    </>
+                  ) : (
+                    <select
+                      value={ad.status}
+                      onChange={(e) => setAdStatus(ad._id, e.target.value)}
+                      disabled={isBusy(ad._id)}
+                      className="rounded-xl border border-gray-200 bg-white px-2 py-1.5 text-xs outline-none disabled:opacity-50"
+                    >
+                      {Object.entries(STATUS_FA).map(([k, v]) => (
+                        <option key={k} value={k}>{v}</option>
+                      ))}
+                    </select>
+                  )}
+                  <button
+                    onClick={() => removeAd(ad._id)}
+                    disabled={isBusy(ad._id)}
+                    className="rounded-xl px-2.5 py-1.5 text-xs text-red-400 transition hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                  >
+                    حذف
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -273,10 +316,14 @@ function AdsTab({ initialStatus = '', onPendingChange }) {
               className="mt-4 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-7 outline-none transition focus:border-red-400 focus:bg-white"
             />
             <div className="mt-4 flex gap-2">
-              <button onClick={doReject} className="flex-1 rounded-2xl bg-red-500 py-3 text-sm font-extrabold text-white shadow-lg shadow-red-500/25 transition hover:bg-red-600">
-                رد آگهی و ارسال دلیل
+              <button
+                onClick={doReject}
+                disabled={rejectBusy}
+                className="flex-1 rounded-2xl bg-red-500 py-3 text-sm font-extrabold text-white shadow-lg shadow-red-500/25 transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {rejectBusy ? 'در حال ارسال...' : 'رد آگهی و ارسال دلیل'}
               </button>
-              <button onClick={() => setRejecting(null)} className="rounded-2xl border border-gray-200 px-5 py-3 text-sm text-gray-500">
+              <button onClick={() => setRejecting(null)} disabled={rejectBusy} className="rounded-2xl border border-gray-200 px-5 py-3 text-sm text-gray-500 disabled:opacity-60">
                 انصراف
               </button>
             </div>
@@ -444,6 +491,7 @@ function ReportsTab({ onCountChange }) {
   const [expanded, setExpanded] = useState(null);
   const [rejecting, setRejecting] = useState(null); // adId
   const [rejectReason, setRejectReason] = useState('');
+  const [busy, setBusyState] = useState(false); // گارد ضد دابل‌کلیک روی اقدامات گزارش
 
   const load = useCallback(() => {
     api(`/admin/reports?status=${status}&page=${page}`).then(setData).catch(() => {});
@@ -451,6 +499,8 @@ function ReportsTab({ onCountChange }) {
   useEffect(load, [load]);
 
   const resolve = async (adId, action, reason) => {
+    if (busy) return; // جلوگیری از اجرای دوبارهٔ اقدام با کلیک دوم
+    setBusyState(true);
     try {
       await api(`/admin/reports/ad/${adId}/resolve`, { method: 'POST', body: { action, reason } });
       toast.success(
@@ -465,6 +515,8 @@ function ReportsTab({ onCountChange }) {
       onCountChange?.();
     } catch (err) {
       toast.error(err.message);
+    } finally {
+      setBusyState(false);
     }
   };
 
@@ -567,21 +619,21 @@ function ReportsTab({ onCountChange }) {
               {/* اقدامات */}
               {status === 'open' && (
                 <div className="flex flex-wrap items-center gap-2 border-t border-gray-50 bg-gray-50/50 px-4 py-3">
-                  <button onClick={() => resolve(g.adId, 'dismiss')} className="rounded-xl bg-gray-200 px-3.5 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-300">
+                  <button onClick={() => resolve(g.adId, 'dismiss')} disabled={busy} className="rounded-xl bg-gray-200 px-3.5 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-300 disabled:opacity-50">
                     بی‌اساس
                   </button>
                   {g.ad && (
                     <>
-                      <button onClick={() => resolve(g.adId, 'hide')} className="rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-600 transition hover:bg-amber-100">
+                      <button onClick={() => resolve(g.adId, 'hide')} disabled={busy} className="rounded-xl bg-amber-50 px-3.5 py-2 text-xs font-bold text-amber-600 transition hover:bg-amber-100 disabled:opacity-50">
                         مخفی کردن
                       </button>
-                      <button onClick={() => { setRejecting(g.adId); setRejectReason(''); }} className="rounded-xl bg-orange-50 px-3.5 py-2 text-xs font-bold text-orange-600 transition hover:bg-orange-100">
+                      <button onClick={() => { setRejecting(g.adId); setRejectReason(''); }} disabled={busy} className="rounded-xl bg-orange-50 px-3.5 py-2 text-xs font-bold text-orange-600 transition hover:bg-orange-100 disabled:opacity-50">
                         رد با دلیل
                       </button>
                     </>
                   )}
                   <span className="flex-1" />
-                  <button onClick={() => confirmDelete(g.adId)} className="rounded-xl bg-red-50 px-3.5 py-2 text-xs font-bold text-red-500 transition hover:bg-red-100">
+                  <button onClick={() => confirmDelete(g.adId)} disabled={busy} className="rounded-xl bg-red-50 px-3.5 py-2 text-xs font-bold text-red-500 transition hover:bg-red-100 disabled:opacity-50">
                     حذف آگهی
                   </button>
                 </div>
@@ -611,11 +663,12 @@ function ReportsTab({ onCountChange }) {
             <div className="mt-4 flex gap-2">
               <button
                 onClick={() => rejectReason.trim() ? resolve(rejecting, 'reject', rejectReason.trim()) : toast.warning('دلیل را بنویسید')}
-                className="flex-1 rounded-2xl bg-red-500 py-3 text-sm font-extrabold text-white shadow-lg shadow-red-500/25 transition hover:bg-red-600"
+                disabled={busy}
+                className="flex-1 rounded-2xl bg-red-500 py-3 text-sm font-extrabold text-white shadow-lg shadow-red-500/25 transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                رد آگهی
+                {busy ? 'در حال ارسال...' : 'رد آگهی'}
               </button>
-              <button onClick={() => setRejecting(null)} className="rounded-2xl border border-gray-200 px-5 py-3 text-sm text-gray-500">
+              <button onClick={() => setRejecting(null)} disabled={busy} className="rounded-2xl border border-gray-200 px-5 py-3 text-sm text-gray-500 disabled:opacity-60">
                 انصراف
               </button>
             </div>
