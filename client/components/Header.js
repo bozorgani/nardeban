@@ -95,9 +95,9 @@ function SearchBar() {
           <button
             type="submit"
             aria-label="جستجو"
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-brand"
+            className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-gray-400 transition hover:text-brand"
           >
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
               <circle cx="11" cy="11" r="7" />
               <path d="m21 21-4.3-4.3" />
             </svg>
@@ -163,8 +163,8 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-4">
-        <Link href="/" className="flex shrink-0 items-center gap-1.5 text-xl font-black text-brand">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+        <Link href="/" aria-label="بفروش — صفحهٔ اصلی" className="flex shrink-0 items-center gap-1.5 text-xl font-black text-brand">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true" focusable="false">
             <path d="M8 3v18M16 3v18M8 7h8M8 12h8M8 17h8" />
           </svg>
           <span className="hidden sm:inline">بفروش</span>

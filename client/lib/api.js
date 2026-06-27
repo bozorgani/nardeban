@@ -63,6 +63,22 @@ export function imgUrl(path) {
   return `${API_URL}${path}`;
 }
 
+/**
+ * نسخهٔ بندانگشتی (۴۰۰px) عکس برای کارت‌ها و لیست‌ها.
+ * بک‌اند هنگام آپلود علاوه بر فایل اصلی، یک `<base>.thumb.webp` می‌سازد
+ * (در optimizeImages.js). نمایش thumbnail در کارت‌ها به‌جای تصویر ۱۶۰۰px،
+ * حجم انتقال و LCP موبایل را به‌شدت کاهش می‌دهد.
+ * اگر مسیر فرمت موردانتظار را نداشت (عکس‌های قدیمی/غیر-webp)، به همان اصل برمی‌گردد.
+ */
+export function thumbUrl(path) {
+  if (!path) return null;
+  if (path.startsWith('http')) return path;
+  const thumb = path.endsWith('.webp')
+    ? path.replace(/\.webp$/, '.thumb.webp')
+    : path; // فایل قدیمی بدون نسخهٔ thumb → همان اصل
+  return `${API_URL}${thumb}`;
+}
+
 export function formatPrice(ad) {
   if (ad.isFree) return 'رایگان';
   if (!ad.price) return 'توافقی';

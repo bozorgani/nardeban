@@ -55,10 +55,13 @@ const nextConfig = {
       "object-src 'none'",
       "frame-ancestors 'none'",
       "form-action 'self'",
-      "script-src 'self' 'unsafe-inline'",
+      // Cloudflare Web Analytics (beacon) — توسط Cloudflare به‌صورت خودکار
+      // تزریق می‌شود؛ بدون این، CSP آن را بلاک و در کنسول خطا ثبت می‌کند.
+      "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
       "img-src 'self' data: blob: https: http:",
+      // connect-src شامل https: است که cloudflareinsights را هم پوشش می‌دهد
       "connect-src 'self' https: wss: ws:",
       "worker-src 'self' blob:",
       "manifest-src 'self'",

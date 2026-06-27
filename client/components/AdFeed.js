@@ -164,7 +164,7 @@ export default function AdFeed({ initialAds, total, pages, query }) {
         )}
 
         {!hasMore && ads.length > 0 && (
-          <p className="py-8 text-center text-sm text-gray-300">
+          <p className="py-8 text-center text-sm text-gray-500">
             ✓ همهٔ {Number(total).toLocaleString('fa-IR')} آگهی نمایش داده شد
           </p>
         )}

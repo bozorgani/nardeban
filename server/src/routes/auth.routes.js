@@ -5,7 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { sendOtp } from '../services/sms.js';
 import { JWT_SECRET } from '../config/env.js';
 import { generateOtp, hashOtp, safeEqualHash } from '../utils/otp.js';
-import { TOKEN_COOKIE, tokenCookieOptions } from '../utils/token.js';
+import { TOKEN_COOKIE, tokenCookieOptions, getTokenFromReq } from '../utils/token.js';
 
 const router = Router();
 
@@ -144,10 +144,22 @@ router.post('/logout', (_req, res) => {
   res.json({ ok: true });
 });
 
-// اطلاعات کاربر جاری
-router.get('/me', requireAuth, (req, res) => {
-  const { _id, phone, name, city, favorites, role } = req.user;
-  res.json({ user: { id: _id, phone, name, city, favorites, role } });
+// اطلاعات کاربر جاری — endpoint «وضعیت احراز هویت» (نه منبع محافظت‌شده).
+// برای کاربر مهمان به‌جای 401، پاسخ 200 با user:null می‌دهد تا در کنسول
+// مرورگر خطای شبکه ثبت نشود (بهبود امتیاز Best Practices در Lighthouse و
+// تمیز ماندن کنسول). رفتار کلاینت تغییری نمی‌کند: نبودِ user = خروج.
+router.get('/me', async (req, res) => {
+  try {
+    const token = getTokenFromReq(req);
+    if (!token) return res.json({ user: null });
+    const payload = jwt.verify(token, JWT_SECRET);
+    const user = await User.findById(payload.id);
+    if (!user || user.isBlocked) return res.json({ user: null });
+    const { _id, phone, name, city, favorites, role } = user;
+    res.json({ user: { id: _id, phone, name, city, favorites, role } });
+  } catch {
+    res.json({ user: null });
+  }
 });
 
 export default router;

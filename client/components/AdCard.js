@@ -1,9 +1,11 @@
 import Link from 'next/link';
-import { imgUrl, formatPrice, timeAgo } from '../lib/api';
+import { imgUrl, thumbUrl, formatPrice, timeAgo } from '../lib/api';
 
 // priority=true برای کارت‌های بالای صفحه (LCP): تصویر eager + fetchpriority بالا
 export default function AdCard({ ad, priority = false }) {
-  const img = ad.images?.[0] ? imgUrl(ad.images[0]) : null;
+  // کارت فقط ۱۲۸px است → نسخهٔ بندانگشتی ۴۰۰px سرو می‌شود (نه تصویر ۱۶۰۰px)
+  const img = ad.images?.[0] ? thumbUrl(ad.images[0]) : null;
+  const fullImg = ad.images?.[0] ? imgUrl(ad.images[0]) : null;
 
   return (
     <Link
@@ -12,9 +14,9 @@ export default function AdCard({ ad, priority = false }) {
     >
       {/* متن — سمت راست */}
       <div className="flex min-w-0 flex-1 flex-col justify-between pl-3">
-        <h3 className="line-clamp-2 text-base font-medium leading-7 text-gray-800">
+        <h2 className="line-clamp-2 text-base font-medium leading-7 text-gray-800">
           {ad.title}
-        </h3>
+        </h2>
         <div className="space-y-1">
           {ad.condition && <p className="text-sm text-gray-500">{ad.condition}</p>}
           <p className="text-base text-gray-700">{formatPrice(ad)}</p>
@@ -39,7 +41,14 @@ export default function AdCard({ ad, priority = false }) {
             fetchPriority={priority ? 'high' : 'auto'}
             decoding="async"
             onError={(e) => {
-              e.currentTarget.style.display = 'none';
+              // عکس‌های قدیمی نسخهٔ thumb ندارند → یک‌بار به تصویر اصلی fallback
+              const el = e.currentTarget;
+              if (fullImg && el.src !== fullImg && !el.dataset.fellBack) {
+                el.dataset.fellBack = '1';
+                el.src = fullImg;
+              } else {
+                el.style.display = 'none';
+              }
             }}
           />
         ) : (
