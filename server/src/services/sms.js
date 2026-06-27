@@ -101,8 +101,9 @@ export async function sendOtp(phone, code) {
       return { delivered: true };
 
     case 'console':
-      // فقط توسعه — کد در کنسول سرور چاپ می‌شود
-      console.log(`📲 [DEV SMS] کد تایید برای ${phone}: ${code}`);
+      // حالت موقت بدون پیامک — کد در لاگ سرور چاپ می‌شود (برای تست/راه‌اندازی).
+      // در همین حالت روی پروداکشن هم کار می‌کند: throw نمی‌کند، فقط کد لو نمی‌رود در پاسخ API.
+      console.log(`\n📲 ====== کد ورود (حالت بدون پیامک) ======\n   شماره: ${phone}\n   کد:    ${code}\n========================================\n`);
       return { delivered: false };
 
     case 'none':
