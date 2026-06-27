@@ -9,7 +9,13 @@ FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+# مقاوم‌سازی در برابر قطعی‌های گذرای شبکه (ECONNRESET هنگام build)
+RUN npm config set fetch-retries 5 \
+  && npm config set fetch-retry-factor 2 \
+  && npm config set fetch-retry-mintimeout 20000 \
+  && npm config set fetch-retry-maxtimeout 120000 \
+  && npm config set fetch-timeout 300000 \
+  && npm ci --no-audit --no-fund
 
 # ---------- مرحلهٔ ۲: build ----------
 FROM node:20-alpine AS builder

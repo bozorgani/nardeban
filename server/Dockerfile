@@ -15,7 +15,15 @@ WORKDIR /app
 
 # نصب وابستگی‌ها از روی lockfile (لایهٔ کش جدا از سورس)
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+# مقاوم‌سازی در برابر قطعی‌های گذرای شبکه (ECONNRESET هنگام build):
+#  - تعداد و فاصلهٔ retry بیشتر، timeout بالاتر
+RUN npm config set fetch-retries 5 \
+  && npm config set fetch-retry-factor 2 \
+  && npm config set fetch-retry-mintimeout 20000 \
+  && npm config set fetch-retry-maxtimeout 120000 \
+  && npm config set fetch-timeout 300000 \
+  && npm ci --omit=dev --no-audit --no-fund \
+  && npm cache clean --force
 
 # کپی سورس برنامه (با احترام به .dockerignore)
 COPY . .
