@@ -240,7 +240,10 @@ export default async function AdPage({ params }) {
                   chatEnabled={ad.chatEnabled !== false}
                 />
               </div>
-              <FavoriteButton adId={ad._id} />
+              <FavoriteButton
+                adId={ad._id}
+                initialSaved={false}
+              />
             </div>
 
             {/* ردیف‌های اطلاعات کلیدی */}
