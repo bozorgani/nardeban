@@ -1,11 +1,10 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { useAuth } from '../lib/AuthContext';
-import { api } from '../lib/api';
-import { useSocket } from '../lib/useSocket';
+
+const BottomNavUnreadBadge = dynamic(() => import('./BottomNavUnreadBadge'));
 
 const ICONS = {
   home: (
@@ -37,40 +36,17 @@ const ICONS = {
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { user } = useAuth();
-  const [unread, setUnread] = useState(0);
-
-  const loadUnread = () =>
-    api('/chat/unread-count').then((d) => setUnread(d.total)).catch(() => {});
-
-  // M8: پیام ارسالی خودِ این کاربر باعث reload بی‌مورد نشود (self=true).
-  useSocket(
-    {
-      'msg:notify': (payload) => {
-        if (payload?.self) return;
-        loadUnread();
-      },
-      'msgs:read': loadUnread,
-    },
-    !!user
-  );
-
-  useEffect(() => {
-    if (!user) return setUnread(0);
-    loadUnread();
-  }, [user]);
 
   const items = [
     { href: '/', label: 'آگهی‌ها', icon: 'home' },
     { href: '/favorites', label: 'نشان‌ها', icon: 'heart' },
     { href: '/new', label: 'ثبت آگهی', icon: 'plus', primary: true },
-    { href: '/chat', label: 'چت و تماس', icon: 'chat', badge: unread },
+    { href: '/chat', label: 'چت و تماس', icon: 'chat', badge: true },
     { href: '/me', label: 'بفروش من', icon: 'user' },
   ];
 
   const isActive = (href) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
 
-  // در صفحهٔ چت (تمام‌صفحه در موبایل) نوار پایین مخفی می‌شود تا روی ورودی پیام نیفتد (موارد ۹،۱۰)
   if (pathname.startsWith('/chat')) return null;
 
   return (
@@ -100,11 +76,7 @@ export default function BottomNav() {
             >
               <span className="relative">
                 {ICONS[it.icon]}
-                {it.badge > 0 && (
-                  <span className="absolute -left-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[9px] font-bold text-white">
-                    {Number(it.badge).toLocaleString('fa-IR')}
-                  </span>
-                )}
+                {it.badge ? <BottomNavUnreadBadge /> : null}
               </span>
               <span className={`text-[10px] ${active ? 'font-bold' : ''}`}>{it.label}</span>
             </Link>

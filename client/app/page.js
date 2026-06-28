@@ -93,7 +93,18 @@ export default async function HomePage({ searchParams }) {
               <h1 className="min-w-0 truncate text-base font-extrabold text-gray-800">{heading}</h1>
               <div className="flex flex-shrink-0 items-center gap-2">
                 <Suspense fallback={null}>
-                  <SaveSearchButton catName={activeCat?.name} />
+                  <SaveSearchButton
+                    catName={activeCat?.name}
+                    q={params.q || ''}
+                    category={params.category || ''}
+                    city={params.city || ''}
+                    minPrice={params.minPrice || null}
+                    maxPrice={params.maxPrice || null}
+                    attrs={Object.fromEntries(
+                      Object.entries(params).filter(([k, v]) => k.startsWith('attr_') && v)
+                        .map(([k, v]) => [k.replace(/^attr_/, ''), v])
+                    )}
+                  />
                 </Suspense>
                 <span className="text-xs text-gray-400">
                   {Number(total).toLocaleString('fa-IR')} آگهی
