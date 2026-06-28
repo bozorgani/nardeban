@@ -53,10 +53,13 @@ router.post('/request-otp', async (req, res, next) => {
     const code = generateOtp(); // کد ۶ رقمی امن (SEC-07)
     const expires = new Date(Date.now() + 5 * 60 * 1000);
 
-    // چاپ کد خام در لاگ سرور (برای دیباگ) — قبل از هش‌شدن.
-    // فقط در غیرپروداکشن، یا اگر صراحتاً LOG_OTP=true باشد (دیباگ موقت).
-    // ⚠️ در پروداکشن این را روشن نگذارید؛ کد در لاگ‌ها امن نیست.
-    if (!isProd || process.env.LOG_OTP === 'true') {
+    // 🔒 چاپ کد خام در لاگ — فقط در محیط توسعه (M10)
+    // قبلاً مسیر LOG_OTP=true اجازه می‌داد در پروداکشن هم کد در لاگ چاپ شود.
+    // این یک escape hatch خطرناک بود: هر اپراتوری با دسترسی به لاگ می‌توانست
+    // OTP هر شماره را ببیند → تصاحب کامل حساب. حالا هیچ مسیر فعال‌سازی در
+    // پروداکشن وجود ندارد. کسی که نیاز به دیباگ دارد، باید NODE_ENV را در
+    // محیط staging تغییر دهد (نه production).
+    if (!isProd) {
       console.log(`🔑 [OTP] کد ${phone}: ${code}  (انقضا: ${expires.toLocaleTimeString('fa-IR')})`);
     }
 

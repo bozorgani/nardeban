@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { api, CITIES } from '../lib/api';
+import { api } from '../lib/api';
 import { useSocket } from '../lib/useSocket';
 import { cityLabel, parseCities } from '../lib/cities';
 import CityModal from './CityModal';
@@ -18,13 +18,53 @@ function ChatLink() {
     api('/chat/unread-count').then((d) => setUnread(d.total)).catch(() => {});
 
   // ⚡ پیام جدید → فوراً باج آپدیت می‌شود (بدون انتظار polling)
-  useSocket({ 'msg:notify': load, 'msgs:read': load }, !!user);
+  // M8: اگر پیام را خودِ این کاربر فرستاده (self=true)، unread تغییر نکرده و
+  // نیازی به fetch مجدد نیست؛ از reload بی‌مورد جلوگیری می‌کنیم.
+  useSocket(
+    {
+      'msg:notify': (payload) => {
+        if (payload?.self) return;
+        load();
+      },
+      'msgs:read': load,
+    },
+    !!user
+  );
 
   useEffect(() => {
     if (!user) return;
     load();
-    const t = setInterval(load, 30000); // fallback آهسته
-    return () => clearInterval(t);
+    /*
+      🔋 F10: polling فقط وقتی tab visible است + هنگام بازگشت به tab
+      یک‌بار refresh.
+      قبلاً interval هر ۳۰ ثانیه حتی روی tab مخفی هم اجرا می‌شد →
+      مصرف باتری/دیتا روی موبایل که چندین tab باز است. حالا:
+        - وقتی hidden است → interval را pause می‌کنیم
+        - وقتی visible می‌شود → بلافاصله یک load و سپس interval را start
+    */
+    let t = null;
+    const start = () => {
+      if (t) return;
+      t = setInterval(load, 30000);
+    };
+    const stop = () => {
+      if (t) { clearInterval(t); t = null; }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        load();
+        start();
+      } else {
+        stop();
+      }
+    };
+    // start اولیه فقط اگر visible
+    if (document.visibilityState === 'visible') start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      stop();
+    };
   }, [user]);
 
   if (!user) return null;

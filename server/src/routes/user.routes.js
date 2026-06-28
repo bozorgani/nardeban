@@ -4,17 +4,46 @@ import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Ad from '../models/Ad.js';
 import Review from '../models/Review.js';
+import Conversation from '../models/Conversation.js';
+import Message from '../models/Message.js';
 
 const router = Router();
 
 // لیست نشان‌شده‌ها
+// لیست نشان‌شده‌ها — با pagination (M4)
+//
+// قبلاً کل آرایهٔ favorites با populate برمی‌گشت؛ کاربری با چند صد آگهی نشان‌شده
+// → پاسخ سنگین، پر کردن اتفاقی حافظهٔ Node با populate آبشاری.
+// حالا: paginate روی همان آرایه + populate فقط روی برشِ صفحهٔ جاری.
+//
+// نکته: ترتیب نمایش = ترتیب نشان‌شدن (انتهای آرایه = جدیدتر)، که در toggle
+// favorites با $concatArrays حفظ شده. اینجا reverse می‌کنیم تا جدیدترها بالا
+// بیایند (UX رایج‌تر برای «نشان‌شده‌های من»).
 router.get('/favorites', requireAuth, async (req, res, next) => {
   try {
-    await req.user.populate({
-      path: 'favorites',
-      populate: { path: 'category', select: 'name slug icon' },
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(40, Math.max(1, parseInt(req.query.limit) || 24));
+
+    // user.favorites یک آرایهٔ ObjectId است — بدون populate، صرفاً برای صفحه‌بندی
+    const favIds = Array.isArray(req.user.favorites) ? req.user.favorites : [];
+    const total = favIds.length;
+    // جدیدترها بالا → آرایه را برعکس می‌کنیم
+    const slice = favIds.slice().reverse().slice((page - 1) * limit, page * limit);
+
+    // populate فقط روی برشِ صفحهٔ جاری، با حفظ ترتیبِ slice
+    // (Ad از بالای فایل import شده)
+    const docs = await Ad.find({ _id: { $in: slice } })
+      .populate('category', 'name slug icon')
+      .lean();
+    const byId = new Map(docs.map((d) => [String(d._id), d]));
+    const favorites = slice.map((id) => byId.get(String(id))).filter(Boolean);
+
+    res.json({
+      favorites,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
     });
-    res.json({ favorites: req.user.favorites });
   } catch (err) {
     next(err);
   }
@@ -196,6 +225,12 @@ router.get('/:id/reviews', async (req, res, next) => {
 });
 
 // POST /api/users/:id/reviews — ثبت/ویرایش امتیاز (فقط با ورود)
+//
+// 🔒 ضد رأی‌بازی (M1): قبلاً هر کاربری می‌توانست به هر فروشنده‌ای امتیاز بدهد
+// بدون اینکه واقعاً با او در ارتباط بوده باشد → ratingها قابل اعتماد نبودند.
+// حالا شرط ثبت امتیاز این است که کاربر حداقل یک «گفتگوی واقعی» (یعنی یک
+// Conversation با حداقل یک پیامِ رد و بدل‌شده) با فروشنده داشته باشد.
+// این روش بدون نیاز به سیستم سفارش/ثبت معامله، عملاً جلوی رأی‌بازی کور را می‌گیرد.
 router.post('/:id/reviews', requireAuth, async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -210,6 +245,37 @@ router.post('/:id/reviews', requireAuth, async (req, res, next) => {
     const rating = parseInt(req.body.rating);
     if (!rating || rating < 1 || rating > 5)
       return res.status(400).json({ message: 'امتیاز باید بین ۱ تا ۵ باشد' });
+
+    // 🔒 الزام تعامل قبلی: حداقل یک گفتگو با حداقل یک پیام بین این دو نفر
+    // وجود داشته باشد (فرقی نمی‌کند کدام طرف خریدار/فروشنده بوده).
+    // کوئری سبک است: ابتدا convId(های) مشترک را پیدا می‌کنیم (با ایندکس
+    // یکتای {ad, buyer} و شرط seller، خیلی سریع)، سپس وجود حداقل یک پیام
+    // را با exists چک می‌کنیم (بدون شمارش کامل).
+    const convIds = await Conversation.find({
+      $or: [
+        { buyer: req.user._id, seller: id },
+        { buyer: id, seller: req.user._id },
+      ],
+    })
+      .select('_id')
+      .lean();
+
+    if (!convIds.length) {
+      return res.status(403).json({
+        message: 'برای ثبت امتیاز ابتدا باید با این کاربر گفتگو کرده باشید',
+        code: 'NO_INTERACTION',
+      });
+    }
+
+    const hasMessage = await Message.exists({
+      conversation: { $in: convIds.map((c) => c._id) },
+    });
+    if (!hasMessage) {
+      return res.status(403).json({
+        message: 'برای ثبت امتیاز باید حداقل یک پیام رد و بدل کرده باشید',
+        code: 'NO_INTERACTION',
+      });
+    }
 
     const comment = (req.body.comment || '').trim().slice(0, 500);
 

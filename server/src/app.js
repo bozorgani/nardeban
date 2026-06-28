@@ -31,7 +31,22 @@ import seoRoutes from './routes/seo.routes.js';
 
 export function createApp() {
   const app = express();
-  app.set('trust proxy', 1); // پشت Nginx/پروکسی، IP واقعی برای rate-limit
+  // 🔒 trust proxy (M7) — پشت Cloudflare → nginx → Express
+  // ----------------------------------------------------------------------
+  // قبلاً مقدار «1» بود؛ یعنی فقط آخرین پروکسی trusted است. اما زنجیرهٔ
+  // X-Forwarded-For که به Express می‌رسد به این شکل است:
+  //     [client, cloudflare-edge, nginx-passthrough]
+  // با trust=1، Express رشتهٔ سمت راست (nginx) را حذف می‌کند و IP کلودفلر
+  // را به‌عنوان «کلاینت واقعی» می‌بیند → همهٔ rate limiterها روی IP لبهٔ
+  // کلودفلر اعمال می‌شدند، نه روی کاربر واقعی → bypass عملی محافظت‌ها.
+  //
+  // راه‌حل قطعی این است که در nginx از هدر CF-Connecting-IP استفاده کنیم
+  // (تنظیم در nginx/nardeban.conf اعمال شد) و در Express فقط به loopback
+  // اعتماد کنیم (چون فقط nginx روی همان ماشین به ما پراکسی می‌کند و XFF
+  // را با IP واقعی کاربر می‌سازد).
+  //
+  // اگر روزی nginx را روی ماشین دیگری گذاشتید، IP/CIDR آن را اضافه کنید.
+  app.set('trust proxy', 'loopback');
 
   // فشرده‌سازی gzip/brotli روی پاسخ‌های JSON و HTML — کاهش چشمگیر حجم انتقال و TTFB
   app.use(compression());
@@ -122,10 +137,69 @@ export function createApp() {
   app.use('/api/saved-searches', savedSearchRoutes);
   app.use('/api/seo', seoRoutes);
 
-  // error handler (فقط برای مسیرهای ثبت‌شده؛ catch-all برای Next در server.js اضافه می‌شود)
-  app.use((err, _req, res, _next) => {
-    console.error(err);
-    res.status(err.status || 500).json({ message: err.message || 'خطای سرور' });
+  // 🔒 error handler (M3) — جلوگیری از information disclosure
+  // ----------------------------------------------------------------------
+  // قبلاً err.message هر چه بود مستقیم به کلاینت برمی‌گشت؛ این یعنی پیام‌های
+  // داخلی Mongoose/Node (مثلاً «E11000 duplicate key error collection: …»،
+  // مسیر فایل، نام فیلد) به مهاجم نشت می‌کرد و کمک به نگاشت سرویس می‌شد.
+  //
+  // سیاست جدید:
+  //   - خطاهای عملیاتی (که کد ما با err.status بین 400 تا 499 پرتاب کرده)
+  //     پیام فارسیِ امن دارند → همان پیام به کلاینت می‌رود.
+  //   - خطاهای شناخته‌شدهٔ ورودی (Mongoose ValidationError/CastError و
+  //     MulterError و SyntaxError از body parser) به 400 با پیام عمومی map می‌شوند.
+  //   - بقیه (500 یا بدون status) → فقط یک پیام عمومی «خطای داخلی سرور»؛
+  //     جزئیات کامل (stack/پیام/متد/مسیر) فقط در لاگ سرور دیده می‌شوند.
+  //   - در حالت توسعه (NODE_ENV !== production) برای سهولت دیباگ، پیام واقعی
+  //     در پاسخ debug برگردانده می‌شود (هرگز در پروداکشن).
+  app.use((err, req, res, _next) => {
+    const status = Number.isInteger(err?.status) ? err.status : 500;
+    const isClientError = status >= 400 && status < 500;
+
+    // لاگ کامل سمت سرور (در آینده پشت لاگر ساختاریافته می‌رود)
+    if (status >= 500) {
+      console.error(`[ERR ${status}] ${req.method} ${req.originalUrl} —`, err);
+    } else {
+      // خطاهای کاربر را با حجم کمتر لاگ کن
+      console.warn(`[WARN ${status}] ${req.method} ${req.originalUrl} — ${err?.message || err}`);
+    }
+
+    // map خطاهای شناخته‌شده به 400 امن
+    let safeStatus = status;
+    let safeMessage;
+
+    if (isClientError && typeof err.message === 'string' && err.message.length < 300) {
+      // خطای پرتاب‌شده توسط کد ما با پیام فارسیِ آماده
+      safeMessage = err.message;
+    } else if (err?.name === 'ValidationError') {
+      safeStatus = 400;
+      safeMessage = 'ورودی نامعتبر است';
+    } else if (err?.name === 'CastError') {
+      safeStatus = 400;
+      safeMessage = 'شناسه یا مقدار نامعتبر است';
+    } else if (err?.name === 'MulterError') {
+      safeStatus = 400;
+      // پیام‌های multer انگلیسی‌اند اما اطلاعات حساس ندارند؛ به فارسی map کنیم
+      const map = {
+        LIMIT_FILE_SIZE: 'حجم فایل بیش از حد مجاز است',
+        LIMIT_FILE_COUNT: 'تعداد فایل‌ها بیش از حد مجاز است',
+        LIMIT_UNEXPECTED_FILE: 'فایل غیرمنتظره ارسال شد',
+      };
+      safeMessage = map[err.code] || 'خطا در آپلود فایل';
+    } else if (err?.type === 'entity.parse.failed' || err?.name === 'SyntaxError') {
+      safeStatus = 400;
+      safeMessage = 'داده ارسالی نامعتبر است';
+    } else {
+      safeStatus = 500;
+      safeMessage = 'خطای داخلی سرور — لطفاً بعداً تلاش کنید';
+    }
+
+    const body = { message: safeMessage };
+    // فقط در توسعه: جزئیات برای دیباگ. هرگز در پروداکشن.
+    if (process.env.NODE_ENV !== 'production' && err?.message && err.message !== safeMessage) {
+      body.debug = String(err.message).slice(0, 500);
+    }
+    res.status(safeStatus).json(body);
   });
 
   return app;

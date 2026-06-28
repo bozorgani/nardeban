@@ -19,8 +19,28 @@
 
 html {
   direction: rtl;
-  scroll-behavior: smooth;
   font-size: 17px; /* بزرگ‌تر از پیش‌فرض ۱۶px برای خوانایی فارسی */
+  /* scroll-behavior فقط برای کاربرانی که کاهش حرکت نخواسته‌اند (F5) */
+  scroll-behavior: smooth;
+}
+/* ♿ احترام به prefers-reduced-motion (F5)
+   کاربرانی که در سیستم‌عامل «Reduce motion» را روشن کرده‌اند (vestibular
+   disorders, motion sickness, …) نباید با انیمیشن مواجه شوند. این قاعده
+   روی همهٔ انیمیشن‌ها/transition/scroll smooth اعمال می‌شود — هم Tailwind
+   utilityها (transition، animate-pulse، animate-spin) و هم anim‌های دستی
+   ما (.fade-up, .toast-in, .dialog-in). */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 body {
@@ -29,7 +49,18 @@ body {
   color: #1f2937;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden; /* جلوگیری از اسکرول افقی ناخواسته در موبایل (مورد ۵) */
+  /*
+    📐 F6: قبلاً overflow-x: hidden روی body بود که در برخی مرورگرها
+    (به‌ویژه Safari/Firefox با نسخه‌های متفاوت) position:sticky را در عناصر
+    داخلی می‌شکست (Sticky نیاز دارد scroll container هیچ ancestor با
+    overflow ≠ visible نباشد).
+    راه‌حل مدرن: overflow-x: clip → جلوی scroll افقی را می‌گیرد ولی scroll
+    container جدیدی نمی‌سازد، پس sticky سالم می‌ماند. پشتیبانی: Chrome 90+،
+    Safari 16+، Firefox 81+ → پوشش ~۹۸٪ کاربران.
+    fallback: روی مرورگرهای خیلی قدیمی، overflow-x: hidden اعمال می‌شود.
+  */
+  overflow-x: hidden; /* fallback برای Safari < 16 */
+  overflow-x: clip;   /* مدرن: همان رفتار بدون شکستن sticky */
 }
 
 /* اعداد فارسی یکدست‌تر */

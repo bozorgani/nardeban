@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../lib/AuthContext';
 import { usePush } from '../../lib/usePush';
-import { api, CITIES } from '../../lib/api';
+import { api } from '../../lib/api';
+import { PROVINCES } from '../../lib/cities';
 import { useToast } from '../../components/Toast';
 import { SkeletonBox } from '../../components/Skeleton';
 import { useModalA11y } from '../../lib/useModalA11y';
@@ -129,13 +130,23 @@ function EditProfileSheet({ user, open, onClose, onSaved }) {
         />
 
         <label className="mb-1.5 block text-sm font-bold text-gray-700">شهر</label>
+        {/*
+          F4: قبلاً فقط ۱۰ شهر بزرگ از CITIES (در api.js) نمایش داده می‌شد و
+          کاربر ساری/قشم/گرگان/… نمی‌توانست شهر خود را انتخاب کند. حالا از
+          PROVINCES (هر ۳۱ استان + شهرهای زیرمجموعه) با optgroup گروه‌بندی
+          شده استفاده می‌کنیم تا UX انتخاب راحت و کامل باشد.
+        */}
         <select
           value={city}
           onChange={(e) => setCity(e.target.value)}
           className="mb-6 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none transition focus:border-brand focus:bg-white"
         >
-          {CITIES.map((c) => (
-            <option key={c} value={c}>{c}</option>
+          {PROVINCES.map((province) => (
+            <optgroup key={province.name} label={province.name}>
+              {province.cities.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </optgroup>
           ))}
         </select>
 

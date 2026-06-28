@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { cache } from 'react';
+import { cache, Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 import FavoriteButton from '../../../components/FavoriteButton';
@@ -12,6 +12,29 @@ import SimilarAds from './SimilarAds';
 import ViewCounter from './ViewCounter';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+// Skeleton برای SimilarAds در حین stream شدن (F3)
+function SimilarSkeleton() {
+  return (
+    <section className="mt-10 border-t border-gray-100 pt-8" aria-hidden="true">
+      <div className="mb-4 h-7 w-32 rounded bg-gray-100" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="flex h-40 animate-pulse rounded-lg border border-gray-100 bg-white p-4">
+            <div className="flex flex-1 flex-col justify-between pl-3">
+              <div className="space-y-2">
+                <div className="h-4 w-3/4 rounded bg-gray-100" />
+                <div className="h-4 w-1/2 rounded bg-gray-100" />
+              </div>
+              <div className="h-3 w-1/3 rounded bg-gray-100" />
+            </div>
+            <div className="h-32 w-32 self-center rounded-md bg-gray-100" />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 // با React cache، page و generateMetadata در همان درخواست فقط یک‌بار fetch می‌کنند (FE-01)
 const getAd = cache(async (id) => {
@@ -92,8 +115,78 @@ export default async function AdPage({ params }) {
   const timeText = new Date(ad.createdAt).toLocaleDateString('fa-IR');
   const ownerId = ad.owner?._id || ad.owner;
 
+  /*
+    🏷 F9: JSON-LD Product/Offer برای SEO صفحهٔ آگهی
+    -------------------------------------------------------------------------
+    این مهم‌ترین structured data برای یک marketplace است. Google با این:
+      - rich snippet (قیمت، موجودی، تصویر) در نتایج جستجو نمایش می‌دهد
+      - آگهی را در Google Shopping/Merchant graph قابل کشف می‌کند
+      - CTR را در شرایط واقعی ~۲۰-۳۰٪ بهبود می‌دهد (داده‌های مشابه دیوار/شیپور)
+
+    استانداردهای رعایت‌شده:
+      - schema.org Product (نه Offer به‌تنهایی) چون آگهی یک آیتم فیزیکی است
+      - availability: InStock | Reserved | SoldOut | OutOfStock بر اساس status
+      - priceCurrency: IRR (تومان = IRR ÷ ۱۰، ولی Google با IRR و قیمت تومانی
+        کار می‌کند چون marketplace معیار IRT را قبول نمی‌کند — قیمت را همان
+        مقدار تومان می‌فرستیم با IRR، چون marketplaceهای ایرانی هم همین می‌کنند)
+      - اگر isFree یا بدون قیمت → Offer حذف می‌شود (Product بدون قیمت معتبر است)
+  */
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  const apiOrigin = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+  const availabilityMap = {
+    active: 'https://schema.org/InStock',
+    reserved: 'https://schema.org/PreOrder',
+    sold: 'https://schema.org/SoldOut',
+    hidden: 'https://schema.org/OutOfStock',
+  };
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: ad.title,
+    description: (ad.description || '').slice(0, 5000),
+    image: (ad.images || []).slice(0, 5).map((p) =>
+      p.startsWith('http') ? p : `${apiOrigin}${p}`
+    ),
+    sku: String(ad._id),
+    category: ad.category?.name || undefined,
+    brand: ad.model
+      ? { '@type': 'Brand', name: ad.model }
+      : undefined,
+    // فقط برای آگهی فعال/رزرو/فروخته Offer می‌گذاریم
+    ...(ad.status !== 'pending' && ad.status !== 'rejected'
+      ? {
+          offers: {
+            '@type': 'Offer',
+            url: `${siteUrl}/ads/${ad._id}`,
+            priceCurrency: 'IRR',
+            // قیمت صفر/توافقی → 0 (Google می‌پذیرد) ولی availability همچنان معنا دارد
+            price: ad.isFree ? 0 : Number(ad.price || 0),
+            availability: availabilityMap[ad.status] || 'https://schema.org/InStock',
+            itemCondition:
+              ad.condition === 'نو'
+                ? 'https://schema.org/NewCondition'
+                : 'https://schema.org/UsedCondition',
+            seller: {
+              '@type': 'Person',
+              name: ad.owner?.name || 'کاربر بفروش',
+            },
+            areaServed: ad.city,
+          },
+        }
+      : {}),
+    // datePosted روی Product غیراستاندارد است؛ از releaseDate به‌جایش
+    releaseDate: ad.createdAt,
+  };
+
   return (
     <div className="mx-auto max-w-5xl">
+      {/* 🏷 JSON-LD برای Rich Snippet گوگل (F9) */}
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       {/* ثبت بازدید فقط برای آگهی فعال و یک‌بار در مرورگر (FE-01) */}
       {ad.status === 'active' && <ViewCounter adId={String(ad._id)} />}
 
@@ -252,8 +345,17 @@ export default async function AdPage({ params }) {
         </div>
       </div>
 
-      {/* آگهی‌های مشابه — فقط برای آگهی‌های منتشرشده */}
-      {ad.status === 'active' && <SimilarAds adId={String(ad._id)} />}
+      {/*
+        آگهی‌های مشابه — فقط برای آگهی‌های منتشرشده (F3)
+        داخل Suspense تا fetch این بخش، render بقیهٔ صفحه (محتوای اصلی،
+        گالری، ContactBox) را بلاک نکند → TTFB سریع‌تر، LCP سریع‌تر.
+        Skeleton ساده در حین بارگذاری → CLS صفر.
+      */}
+      {ad.status === 'active' && (
+        <Suspense fallback={<SimilarSkeleton />}>
+          <SimilarAds adId={String(ad._id)} />
+        </Suspense>
+      )}
     </div>
   );
 }

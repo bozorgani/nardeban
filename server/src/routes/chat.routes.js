@@ -16,16 +16,35 @@ router.use(requireAuth); // همهٔ مسیرهای چت نیاز به ورود 
 const isMember = (conv, userId) =>
   conv.buyer.equals(userId) || conv.seller.equals(userId);
 
-// لیست همهٔ گفتگوهای من (خریدار یا فروشنده)
+// لیست گفتگوهای من (خریدار یا فروشنده) — با pagination (M4)
+//
+// قبلاً همهٔ گفتگوهای کاربر یک‌جا برگردانده می‌شد. کاربری با هزاران گفتگو
+// → پاسخ چند MB، مصرف زیاد حافظهٔ سرور و کلاینت، و TTFB بالا.
+// حالا: page/limit با سقف منطقی + total و pages برای UI.
+//
+// نکته: totalUnread جداگانه از تمام رکوردهای کاربر (نه فقط صفحهٔ جاری)
+// محاسبه می‌شود تا باج هدر چت درست بماند؛ برای این کار از همان aggregate سبک
+// که در /unread-count داریم استفاده می‌کنیم.
 router.get('/conversations', async (req, res, next) => {
   try {
     const uid = req.user._id;
-    const convs = await Conversation.find({ $or: [{ buyer: uid }, { seller: uid }] })
-      .sort({ lastMessageAt: -1 })
-      .populate('ad', 'title images price isFree status')
-      .populate('buyer', 'name phone')
-      .populate('seller', 'name phone')
-      .lean();
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 30));
+    const filter = { $or: [{ buyer: uid }, { seller: uid }] };
+
+    const [convs, total, allForUnread] = await Promise.all([
+      Conversation.find(filter)
+        .sort({ lastMessageAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .populate('ad', 'title images price isFree status')
+        .populate('buyer', 'name phone')
+        .populate('seller', 'name phone')
+        .lean(),
+      Conversation.countDocuments(filter),
+      // فقط فیلدهای لازم برای جمع total unread — سبک
+      Conversation.find(filter, 'buyer seller unreadBuyer unreadSeller').lean(),
+    ]);
 
     const result = convs.map((c) => {
       const iAmSeller = String(c.seller._id) === String(uid);
@@ -37,8 +56,18 @@ router.get('/conversations', async (req, res, next) => {
       };
     });
 
-    const totalUnread = result.reduce((s, c) => s + (c.unread || 0), 0);
-    res.json({ conversations: result, totalUnread });
+    const totalUnread = allForUnread.reduce(
+      (s, c) => s + (String(c.seller) === String(uid) ? c.unreadSeller : c.unreadBuyer),
+      0
+    );
+
+    res.json({
+      conversations: result,
+      totalUnread,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+    });
   } catch (err) {
     next(err);
   }
@@ -79,6 +108,18 @@ router.post('/conversations', async (req, res, next) => {
       return res.status(400).json({ message: 'نمی‌توانید با خودتان چت کنید' });
     if (ad.chatEnabled === false)
       return res.status(400).json({ message: 'چت برای این آگهی غیرفعال است' });
+
+    // 🔒 M6: شروع گفتگوی جدید فقط روی آگهی فعال یا رزروشده مجاز است.
+    // قبلاً مهاجم می‌توانست روی آگهی pending/rejected/hidden (که هنوز در
+    // عموم منتشر نشده یا توسط ادمین مخفی شده) گفتگوی جدید باز کند —
+    // یعنی فرستادن پیام به فروشنده‌ای که آگهی‌اش هنوز/دیگر منتشر نیست.
+    // sold را هم می‌بندیم تا کاربر تازه‌رسیده روی آگهی فروخته‌شده چت جدید نزند
+    // (گفتگوهای قبلی همچنان فعال‌اند تا تاریخچه‌ها از دست نروند).
+    if (!['active', 'reserved'].includes(ad.status)) {
+      return res
+        .status(403)
+        .json({ message: 'این آگهی در حال حاضر برای چت در دسترس نیست' });
+    }
 
     let conv = await Conversation.findOne({ ad: adId, buyer: req.user._id });
     if (!conv) {
@@ -155,13 +196,21 @@ async function createMessage({ conv, user, text = '', image = '' }) {
   const convId = String(conv._id);
   const otherId = String(iAmSeller ? conv.buyer : conv.seller);
 
-  // ⚡ real-time به روم گفتگو و نوتیف سراسری گیرنده
+  // ⚡ real-time به روم گفتگو و نوتیف سراسری گیرنده + همگام‌سازی تب‌های فرستنده (M8)
   if (ioInstance) {
     ioInstance.to(`conv:${convId}`).emit('msg:new', { convId, message: plain });
     ioInstance.to(`user:${otherId}`).emit('msg:notify', {
       convId,
       message: plain,
       adId: String(conv.ad),
+    });
+    // M8: تب‌های دیگرِ خود فرستنده هم لیست گفتگوها/آخرین پیام را به‌روز کنند
+    // (با علامت self تا unread counter را اشتباه بالا نبرند).
+    ioInstance.to(`user:${String(user._id)}`).emit('msg:notify', {
+      convId,
+      message: plain,
+      adId: String(conv.ad),
+      self: true,
     });
   }
 

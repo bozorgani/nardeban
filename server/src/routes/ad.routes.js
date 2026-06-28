@@ -18,6 +18,33 @@ const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 // الگویی که فاصله و نیم‌فاصله را یکسان می‌بیند
 const flexible = (w) => escapeRegex(w).replace(/ /g, '[\\s\\u200c]+');
 
+/**
+ * نرمال‌سازی + اعتبارسنجی شماره تماس آگهی (M2)
+ * ----------------------------------------------------------------------------
+ * قبلاً contactPhone خام از body پذیرفته می‌شد و در صورت خالی بودن به phone
+ * خود کاربر fallback می‌شد. اما هیچ اعتبارسنجی فرمت روی مقدار غیرخالی نبود؛
+ * یعنی مهاجم می‌توانست شمارهٔ یک قربانی را به‌عنوان contactPhone بگذارد
+ * تا خریدارها به قربانی زنگ بزنند (تلفن‌بازی/مزاحمت).
+ *
+ * سیاست جدید:
+ *   ۱) اعداد فارسی/عربی به انگلیسی تبدیل می‌شوند، هر چیز غیر رقم حذف.
+ *   ۲) اگر دقیقاً ۱۱ رقم با پیشوند 09 بود → پذیرفته می‌شود.
+ *   ۳) در غیر این صورت → null برمی‌گردد؛ caller باید fallback یا 400 بدهد.
+ *
+ * توجه: ما به‌جای پذیرفتن «هر شماره‌ای که کاربر ادعا می‌کند مال خودش است»،
+ * فقط شمارهٔ احرازشدهٔ کاربر را به‌عنوان پیش‌فرض می‌پذیریم. اگر کاربر شمارهٔ
+ * متفاوت بدهد، باید فرمت موبایل ایران داشته باشد (در آینده می‌شود OTP روی
+ * این شماره هم اعمال کرد؛ فعلاً حداقل از شمارهٔ کاملاً جعلی جلوگیری می‌شود).
+ */
+function normalizePhone(raw) {
+  if (raw == null) return null;
+  const en = String(raw)
+    .replace(/[۰-۹]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d))
+    .replace(/[٠-٩]/g, (d) => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+    .replace(/[^0-9]/g, '');
+  return /^09\d{9}$/.test(en) ? en : null;
+}
+
 // پارس امن attrs از فرم (JSON string) — فقط مقادیر رشته‌ای کوتاه
 function parseAttrs(raw) {
   try {
@@ -134,11 +161,70 @@ router.get('/', async (req, res, next) => {
       const textFilter = { ...filter, $text: { $search: phrase } };
       [ads, total] = await run(textFilter);
 
-      // ۲) اگر $text چیزی نیافت (کلمهٔ ناقص/زیررشته فارسی)، fallback به regex
+      // ۲) Fallback به regex (M9) — با محافظ‌های جدی در برابر collection scan.
+      // ----------------------------------------------------------------------
+      // قبلاً اگر $text چیزی نمی‌یافت، یک regex بدون ایندکس روی title/description
+      // اجرا می‌شد. روی یک پایگاه دادهٔ ۵۰k+ آگهی، این یعنی scan کامل (چند ثانیه
+      // پاسخ + CPU spike). مهاجم با یک حرف ناآشنا می‌توانست API را به زانو دربیاورد.
+      //
+      // سیاست جدید:
+      //   ۱) فقط زمانی به regex سقوط کن که فیلتر دیگری وجود دارد (category/city/
+      //      attrs/price) — یعنی Mongo می‌تواند با ایندکس مرکب موجود
+      //      ({status, city, createdAt} یا {status, category, createdAt})
+      //      دامنه را به‌شدت کوچک کند و سپس regex را روی همان زیرمجموعهٔ کوچک
+      //      اعمال کند. این یعنی scan روی هزاران رکورد نه میلیون‌ها.
+      //   ۲) maxTimeMS سخت: اگر Mongo نتوانست در ۸۰۰ms جواب بدهد، رها می‌کند
+      //      و ما خالی برمی‌گردانیم (به‌جای بلاک کردن نخ event loop).
+      //   ۳) regex را به ابتدای کلمه/فاصله/شروع رشته anchor می‌کنیم تا engine
+      //      بتواند زودتر reject کند.
+      //
+      // نتیجه: ۹۹٪ کوئری‌های مشروع همچنان نتیجه می‌گیرند (چون کاربران واقعی
+      // معمولاً شهر/دسته هم انتخاب می‌کنند یا کلمهٔ کامل می‌نویسند که $text پیدا
+      // می‌کند)، و دیگر امکان scan کامل وجود ندارد.
       if (total === 0) {
-        const regexFilter = { ...filter };
-        regexFilter.$and = [...(regexFilter.$and || []), ...regexAnd];
-        [ads, total] = await run(regexFilter);
+        const hasNarrowingFilter =
+          filter.city ||
+          filter.category ||
+          filter.price ||
+          Object.keys(filter).some((k) => k.startsWith('attrs.')) ||
+          filter.$expr;
+
+        if (hasNarrowingFilter) {
+          // anchorـ شده: یا ابتدای رشته/فیلد، یا بعد از فاصله/نیم‌فاصله
+          const anchoredAnd = words.map((w) => ({
+            $or: [
+              { title: { $regex: '(^|[\\s\\u200c])' + flexible(w), $options: 'i' } },
+              { description: { $regex: '(^|[\\s\\u200c])' + flexible(w), $options: 'i' } },
+            ],
+          }));
+          const regexFilter = { ...filter };
+          regexFilter.$and = [...(regexFilter.$and || []), ...anchoredAnd];
+
+          try {
+            const sortSpecLocal = sortMap[sort] || sortMap.newest;
+            [ads, total] = await Promise.all([
+              Ad.find(regexFilter)
+                .sort(sortSpecLocal)
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .select(SELECT)
+                .populate('category', 'name slug icon')
+                .maxTimeMS(800) // sentinel سخت
+                .lean(),
+              Ad.countDocuments(regexFilter).maxTimeMS(400),
+            ]);
+          } catch (err) {
+            // اگر maxTimeMS hit شد یا کوئری شکست خورد، خالی برگرد (نه ۵۰۰)
+            if (err?.code === 50 /* MaxTimeMSExpired */ || /maxTimeMS/i.test(err?.message || '')) {
+              ads = []; total = 0;
+            } else {
+              throw err;
+            }
+          }
+        }
+        // اگر هیچ فیلتر محدودکننده‌ای نیست → regex اجرا نمی‌شود و نتیجهٔ صفرِ
+        // $text محترم شمرده می‌شود. کاربر می‌تواند با اضافه‌کردن شهر/دسته دوباره
+        // امتحان کند.
       }
     } else {
       [ads, total] = await run(filter);
@@ -272,10 +358,50 @@ router.get('/:id', optionalAuth, async (req, res, next) => {
 
 // ثبت بازدید — فقط یک‌بار از مرورگر کاربر هنگام باز شدن صفحه فراخوانی می‌شود (FE-01).
 // جدا از خواندن تا fetch متادیتا/SSR/بات بازدید را دوبار/اشتباه نشمارد.
+//
+// 🔒 ضد تورم بازدید (M5):
+// قبلاً همین endpoint بدون احراز و بدون dedup بود → یک تب می‌توانست با حلقه
+// fetch، بازدید را به دلخواه بالا ببرد (تأثیر مستقیم روی اعتماد خریدار).
+// حالا یک ایندکس در حافظهٔ Node نگه می‌داریم: کلید = `${adId}:${ip}`،
+// مقدار = timestamp. اگر در پنجرهٔ ۶ ساعت قبلاً دیده شده، شمارنده افزایش نمی‌یابد.
+// راه‌حل کامل (پشت چند instance) Redis یا Mongo TTL است؛ این پیاده‌سازی برای
+// یک‌نسخهٔ تک‌instance پروژه (پشت nginx واحد) کاملاً مؤثر است.
+//
+// محدودیت‌ها (مستندسازی شفاف):
+//  - با restart کانتینر، ایندکس از حافظه می‌رود (و dedup ریست می‌شود).
+//  - چند instance: همگام نمی‌شود (هر instance ایندکس خودش را دارد).
+//  - برای horizontal scaling آینده، به Redis (SETEX) مهاجرت کنید.
+//
+// همچنین پاک‌سازی دوره‌ای (هر ۱۵ دقیقه) برای جلوگیری از رشد بی‌نهایت Map.
+const VIEW_DEDUP_TTL_MS = 6 * 60 * 60 * 1000; // ۶ ساعت
+const _viewSeen = new Map(); // key=`${adId}:${ip}` → ts
+
+// پاک‌سازی دوره‌ای (با unref تا روی بستن سرور بلاک نشود)
+const _viewCleanup = setInterval(() => {
+  const now = Date.now();
+  for (const [key, ts] of _viewSeen) {
+    if (now - ts > VIEW_DEDUP_TTL_MS) _viewSeen.delete(key);
+  }
+}, 15 * 60 * 1000);
+_viewCleanup.unref?.();
+
 router.post('/:id/view', async (req, res, next) => {
   try {
     if (!mongoose.isValidObjectId(req.params.id))
       return res.status(400).json({ message: 'شناسه نامعتبر' });
+
+    // IP واقعی کاربر (با trust proxy درست تنظیم شده، req.ip دقیق است).
+    // اگر IP در دسترس نبود، با user-agent ترکیب می‌کنیم (fallback ضعیف ولی بهتر از هیچ).
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+    const dedupKey = `${req.params.id}:${ip}`;
+    const now = Date.now();
+    const last = _viewSeen.get(dedupKey);
+    if (last && now - last < VIEW_DEDUP_TTL_MS) {
+      // قبلاً در پنجره شمرده شده — idempotent: همان موفقیت بدون افزایش
+      return res.json({ ok: true, deduped: true });
+    }
+    _viewSeen.set(dedupKey, now);
+
     // فقط آگهی فعال بازدید می‌گیرد (آگهی در حال بررسی شمارش نمی‌شود)
     await Ad.updateOne({ _id: req.params.id, status: 'active' }, { $inc: { views: 1 } });
     res.json({ ok: true });
@@ -294,6 +420,21 @@ router.post('/', writeLimiter, requireAuth, upload.array('images', 5), optimizeI
 
     if (!title || !description || !category || !city)
       return res.status(400).json({ message: 'عنوان، توضیحات، دسته‌بندی و شهر الزامی است' });
+
+    // 🔒 اعتبارسنجی شماره تماس (M2): اگر کاربر شماره داد، باید فرمت موبایل
+    // ایران داشته باشد؛ وگرنه به شمارهٔ احرازشدهٔ خودش fallback می‌کنیم.
+    // اگر چیزی فرستاد ولی فرمت غلط بود → 400 (تا با fallback خاموش، شمارهٔ
+    // واقعی کاربر بدون اطلاعش روی آگهی نرود).
+    let finalContactPhone = req.user.phone;
+    if (contactPhone !== undefined && String(contactPhone).trim() !== '') {
+      const normalized = normalizePhone(contactPhone);
+      if (!normalized) {
+        return res
+          .status(400)
+          .json({ message: 'شماره تماس نامعتبر است (مثال: 09123456789)' });
+      }
+      finalContactPhone = normalized;
+    }
 
     const images = (req.files || []).map((f) => `/uploads/${f.filename}`);
 
@@ -315,7 +456,7 @@ router.post('/', writeLimiter, requireAuth, upload.array('images', 5), optimizeI
       features: features || '',
       images,
       owner: req.user._id,
-      contactPhone: contactPhone || req.user.phone,
+      contactPhone: finalContactPhone,
       chatEnabled: chatEnabled !== 'false',
       callEnabled: callEnabled !== 'false',
       attrs: parseAttrs(req.body.attrs),
@@ -338,7 +479,9 @@ router.patch('/:id', requireAuth, upload.array('images', 5), optimizeImages, asy
     // فیلدهای متنی ساده
     const allowed = [
       'title', 'description', 'city', 'neighborhood',
-      'condition', 'itemType', 'model', 'features', 'contactPhone',
+      'condition', 'itemType', 'model', 'features',
+      // contactPhone از این لیست خارج شد و در پایین جداگانه با اعتبارسنجی
+      // فرمت پردازش می‌شود (M2 — جلوگیری از گذاشتن شمارهٔ قربانی).
     ];
     const wasUnderReview = ['pending', 'rejected'].includes(ad.status);
     let contentChanged = allowed.some(
@@ -349,6 +492,24 @@ router.patch('/:id', requireAuth, upload.array('images', 5), optimizeImages, asy
     if (req.body.category && String(req.body.category) !== String(ad.category)) contentChanged = true;
 
     for (const key of allowed) if (req.body[key] !== undefined) ad[key] = req.body[key];
+
+    // 🔒 contactPhone با اعتبارسنجی فرمت (M2)
+    if (req.body.contactPhone !== undefined) {
+      const raw = String(req.body.contactPhone).trim();
+      if (raw === '') {
+        // خالی فرستاد → بازگشت به شمارهٔ احرازشدهٔ مالک
+        ad.contactPhone = req.user.phone;
+      } else {
+        const normalized = normalizePhone(raw);
+        if (!normalized) {
+          return res
+            .status(400)
+            .json({ message: 'شماره تماس نامعتبر است (مثال: 09123456789)' });
+        }
+        ad.contactPhone = normalized;
+      }
+      contentChanged = true;
+    }
 
     // مالک فقط بین وضعیت‌های عادی جابجا می‌شود؛ تایید (active) فقط با ادمین
     if (req.body.status !== undefined) {

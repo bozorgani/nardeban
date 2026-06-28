@@ -125,8 +125,19 @@ export function initSocket(httpServer) {
 
         const plain = msg.toObject();
 
-        // به همه اعضای روم گفتگو (فرستنده با ack می‌گیرد، گیرنده با رویداد)
-        socket.to(`conv:${convId}`).emit('msg:new', { convId, message: plain });
+        // 🔧 M8: همگام‌سازی بین تب‌ها + هماهنگی با مسیر REST.
+        // قبلاً socket.to(...) به همه‌ی روم به‌جز فرستنده می‌رفت → اگر کاربر
+        // دو تب باز داشت، تب دومش (که در همان روم بود) پیام جدید را نمی‌گرفت
+        // و UI ناهماهنگ می‌شد. همچنین مسیر REST (chat.routes.createMessage)
+        // از io.to(...) استفاده می‌کند یعنی همان رویداد به همه‌ی تب‌ها می‌رود؛
+        // پس رفتار سوکت با REST متفاوت بود.
+        //
+        // راه‌حل: io.to(...) به‌جای socket.to(...) → همهٔ تب‌های فرستنده و گیرنده
+        // پیام را می‌گیرند. تب فرستنده‌ای که با emit('msg:send', ..., ack) منتظر
+        // پاسخ بوده، علاوه بر ack یک کپی msg:new هم می‌گیرد؛ کلاینت در chat/page
+        // قبلاً dedupe بر اساس message._id دارد (همهٔ مسیرهای ادغام پیام چک می‌کنند
+        // m._id قبلاً هست یا نه) → کپی اضافی به‌صورت بی‌خطر کنار گذاشته می‌شود.
+        io.to(`conv:${convId}`).emit('msg:new', { convId, message: plain });
 
         // نوتیف سراسری برای گیرنده (هدر/لیست گفتگوها حتی وقتی داخل روم نیست)
         const otherId = iAmSeller ? String(conv.buyer) : String(conv.seller);
@@ -134,6 +145,16 @@ export function initSocket(httpServer) {
           convId,
           message: plain,
           adId: String(conv.ad),
+        });
+
+        // 🔧 M8 (هماهنگی با REST): همهٔ تب‌های خودِ فرستنده هم باید لیست
+        // گفتگوها/آخرین پیام را به‌روز کنند. unread فقط برای گیرنده در DB
+        // افزایش یافته، پس روی شمارندهٔ ما هیچ اثری ندارد و فقط UI سینک می‌شود.
+        io.to(`user:${uid}`).emit('msg:notify', {
+          convId,
+          message: plain,
+          adId: String(conv.ad),
+          self: true, // علامت برای کلاینت: باج unread خودت را بالا نبر
         });
 
         // 📲 اگر گیرنده هیچ اتصال سوکت بازی ندارد (آفلاین/تب بسته) → Web Push

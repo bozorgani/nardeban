@@ -718,12 +718,26 @@ export default function AdminPage() {
     api('/admin/reports/open-count').then((d) => setReportCount(d.total)).catch(() => {});
   }, []);
 
-  // شمارنده در انتظار تایید (اولیه + هر ۳۰ ثانیه + فوری بعد از هر اقدام)
+  // شمارنده در انتظار تایید — F10: polling فقط وقتی tab visible است
+  // قبلاً interval حتی روی tab مخفی هم اجرا می‌شد → مصرف غیرضروری برای ادمین
+  // که چند tab باز دارد یا laptop را closeup گذاشته. حالا با visibilitychange
+  // pause/resume می‌کند و هنگام بازگشت بلافاصله یک‌بار refresh می‌زند.
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
     refreshPending();
-    const t = setInterval(refreshPending, 30000);
-    return () => clearInterval(t);
+    let t = null;
+    const start = () => { if (!t) t = setInterval(refreshPending, 30000); };
+    const stop  = () => { if (t) { clearInterval(t); t = null; } };
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') { refreshPending(); start(); }
+      else stop();
+    };
+    if (document.visibilityState === 'visible') start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      stop();
+    };
   }, [user, refreshPending]);
 
   useEffect(() => {

@@ -94,7 +94,12 @@ export function timeAgo(date) {
   return new Date(date).toLocaleDateString('fa-IR');
 }
 
-export const CITIES = [
+// ⚠️ Deprecated (F4): قبلاً این آرایه‌ی ۱۰تایی به‌عنوان منبع شهر در پروفایل
+// استفاده می‌شد و باعث می‌شد کاربر شهر کوچک نتواند شهر خود را انتخاب کند.
+// منبع کامل (۳۱ استان + شهرهای زیرمجموعه): lib/cities.js → PROVINCES / ALL_CITIES.
+// این export به‌عنوان shortlist «شهرهای پربازدید» برای بعضی UIها قابل استفاده
+// است (مثل suggestion سریع)، نه به‌عنوان مرجع کامل شهرها.
+export const POPULAR_CITIES = [
   'تهران', 'مشهد', 'اصفهان', 'شیراز', 'تبریز', 'کرج', 'اهواز', 'قم', 'کرمانشاه', 'رشت',
 ];
 

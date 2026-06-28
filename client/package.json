@@ -5,6 +5,7 @@
   "description": "بفروش — فرانت Next.js (استقرار روی سرور Ubuntu با nginx)",
   "scripts": {
     "dev": "next dev",
+    "prebuild": "node scripts/inject-sw-version.mjs",
     "build": "next build",
     "start": "next start"
   },

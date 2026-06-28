@@ -25,18 +25,16 @@ const nextConfig = {
     '172.16.*.*',
   ],
 
+  // 🖼 next/image (F2)
+  // ----------------------------------------------------------------------
+  // عکس‌ها از قبل توسط sharp روی بک‌اند به webp + thumb 288px تبدیل شده‌اند،
+  // پس از یک loader passthrough استفاده می‌کنیم تا Next روی URL همان عکس
+  // بنشیند (lazy/srcset/sizes/CLS) بدون optimization دوباره.
+  // مزیت: نیازی به مدیریت remotePatterns برای دامنهٔ پروداکشن نیست؛ هر URLی
+  // که از imgUrl/thumbUrl برگردد (نسبی یا مطلق به همان origin) کار می‌کند.
   images: {
-    remotePatterns: [
-      // توسعه‌ی محلی: بک‌اند روی localhost:4000
-      { protocol: 'http', hostname: 'localhost', port: '4000', pathname: '/uploads/**' },
-      { protocol: 'http', hostname: '127.0.0.1', port: '4000', pathname: '/uploads/**' },
-      // عکس‌ها وقتی سایت با IP شبکه باز شده
-      { protocol: 'http', hostname: '192.168.*.*', port: '4000', pathname: '/uploads/**' },
-      { protocol: 'http', hostname: '10.*.*.*', port: '4000', pathname: '/uploads/**' },
-      // پروداکشن: عکس‌ها از همان دامنه پشت nginx سرو می‌شوند (/uploads/**).
-      // اگر بعداً از next/image استفاده کردید، دامنهٔ واقعی خود را اینجا اضافه کنید:
-      // { protocol: 'https', hostname: 'yourdomain.com', pathname: '/uploads/**' },
-    ],
+    loader: 'custom',
+    loaderFile: './lib/imageLoader.js',
   },
 
   // ------------------------------------------------------------------------

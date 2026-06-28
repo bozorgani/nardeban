@@ -43,7 +43,17 @@ export default function BottomNav() {
   const loadUnread = () =>
     api('/chat/unread-count').then((d) => setUnread(d.total)).catch(() => {});
 
-  useSocket({ 'msg:notify': loadUnread, 'msgs:read': loadUnread }, !!user);
+  // M8: پیام ارسالی خودِ این کاربر باعث reload بی‌مورد نشود (self=true).
+  useSocket(
+    {
+      'msg:notify': (payload) => {
+        if (payload?.self) return;
+        loadUnread();
+      },
+      'msgs:read': loadUnread,
+    },
+    !!user
+  );
 
   useEffect(() => {
     if (!user) return setUnread(0);

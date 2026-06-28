@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { imgUrl, thumbUrl } from '../../../lib/api';
 
 export default function Gallery({ images = [], title, icon }) {
@@ -19,15 +20,16 @@ export default function Gallery({ images = [], title, icon }) {
 
   return (
     <div className="space-y-2.5">
-      {/* تصویر بزرگ */}
+      {/* تصویر بزرگ — F2: next/image با priority برای LCP صفحهٔ جزئیات */}
       <div className="group relative aspect-[4/3] overflow-hidden rounded-2xl border border-gray-200 bg-gray-900">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={imgUrl(images[active])}
           alt={title}
-          className="h-full w-full object-contain"
-          fetchPriority="high"
-          decoding="async"
+          fill
+          sizes="(max-width: 768px) 100vw, 50vw"
+          className="object-contain"
+          // تصویر اصلی صفحهٔ آگهی = LCP صفحه. priority باعث preload می‌شود.
+          priority
         />
 
         {images.length > 1 && (
@@ -67,12 +69,18 @@ export default function Gallery({ images = [], title, icon }) {
               key={img}
               type="button"
               onClick={() => setActive(i)}
-              className={`h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border-2 transition ${
+              className={`relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border-2 transition ${
                 i === active ? 'border-brand' : 'border-transparent opacity-60 hover:opacity-100'
               }`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={thumbUrl(img)} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+              <Image
+                src={thumbUrl(img)}
+                alt=""
+                width={64}
+                height={64}
+                sizes="64px"
+                className="h-full w-full object-cover"
+              />
             </button>
           ))}
         </div>

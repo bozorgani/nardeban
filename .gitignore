@@ -8,3 +8,5 @@ server/uploads/*
 !server/uploads/.gitkeep
 # داده‌های موقت mongodb-memory-server
 server/.mongo-tmp/
+# مستندات ممیزی داخلی (در repo نگه‌داری نمی‌شود)
+DEPLOYMENT-AUDIT.md

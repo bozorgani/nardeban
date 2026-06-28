@@ -8,6 +8,9 @@
  *  - API: همیشه Network-Only (داده زنده) — هرگز کش نمی‌شود
  * ------------------------------------------------------------------ */
 
+// 🔄 F7: این مقدار در زمان build توسط scripts/inject-sw-version.mjs به git SHA
+//       (یا SW_VERSION از env / fallback تایم‌استمپ) جایگزین می‌شود. هر استقرار
+//       version یکتا → کش قدیمی خودکار invalidate می‌شود. به دست تغییر ندهید.
 const VERSION = 'v6';
 const STATIC_CACHE = `befrosh-static-${VERSION}`;
 const PAGE_CACHE = `befrosh-pages-${VERSION}`;

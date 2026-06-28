@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { imgUrl, thumbUrl, formatPrice, timeAgo } from '../lib/api';
 
 // priority=true برای کارت‌های بالای صفحه (LCP): تصویر eager + fetchpriority بالا
@@ -27,21 +28,21 @@ export default function AdCard({ ad, priority = false }) {
         </div>
       </div>
 
-      {/* عکس — سمت چپ (مثل دیوار) */}
-      <div className="h-32 w-32 flex-shrink-0 self-center overflow-hidden rounded-md bg-gray-100">
+      {/* عکس — سمت چپ (مثل دیوار) — F2: next/image با passthrough loader */}
+      <div className="relative h-32 w-32 flex-shrink-0 self-center overflow-hidden rounded-md bg-gray-100">
         {img ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={img}
             alt={ad.title}
+            width={128}
+            height={128}
+            sizes="128px"
             className="h-full w-full object-cover"
-            width="128"
-            height="128"
-            loading={priority ? 'eager' : 'lazy'}
-            fetchPriority={priority ? 'high' : 'auto'}
-            decoding="async"
+            // priority=true روی ۴ کارت اول (AdFeed) → preload + fetchpriority:high
+            // → بهبود LCP موبایل
+            priority={priority}
+            // عکس‌های قدیمی نسخهٔ thumb ندارند → یک‌بار به تصویر اصلی fallback
             onError={(e) => {
-              // عکس‌های قدیمی نسخهٔ thumb ندارند → یک‌بار به تصویر اصلی fallback
               const el = e.currentTarget;
               if (fullImg && el.src !== fullImg && !el.dataset.fellBack) {
                 el.dataset.fellBack = '1';
