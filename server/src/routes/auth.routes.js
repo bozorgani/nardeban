@@ -98,32 +98,54 @@ router.post('/verify-otp', async (req, res, next) => {
 
     const ok = safeEqualHash(hashOtp(String(code), phone), user.otpHash);
     if (!ok) {
-      // افزایش شمارندهٔ تلاش ناموفق و قفل در صورت عبور از سقف
-      user.otpAttempts = (user.otpAttempts || 0) + 1;
-      if (user.otpAttempts >= MAX_VERIFY_ATTEMPTS) {
-        user.otpLockedUntil = new Date(Date.now() + LOCK_MINUTES * 60 * 1000);
-        user.otpHash = undefined; // باطل‌کردن کد فعلی — باید کد جدید بگیرد
-        user.otpExpires = undefined;
-        await user.save();
+      // ⚛️ افزایش اتمیک شمارندهٔ تلاش ناموفق (رفع Race Condition).
+      // قبلاً read-modify-write بود: ۱۰۰ درخواست همزمان همگی 0 می‌خواندند و 1
+      // می‌نوشتند (last-write-wins) و شمارنده هرگز به سقف نمی‌رسید.
+      // با $inc اتمیک، هر درخواست مقدار یکتا (1,2,3,...) می‌گیرد و قفل قطعی می‌شود.
+      const updated = await User.findOneAndUpdate(
+        { _id: user._id },
+        { $inc: { otpAttempts: 1 } },
+        { new: true, select: '+otpAttempts' }
+      );
+      const attempts = updated?.otpAttempts ?? MAX_VERIFY_ATTEMPTS;
+
+      if (attempts >= MAX_VERIFY_ATTEMPTS) {
+        // عبور از سقف → قفل و باطل‌کردن کد فعلی (به‌صورت اتمیک، idempotent).
+        await User.updateOne(
+          { _id: user._id },
+          {
+            $set: { otpLockedUntil: new Date(Date.now() + LOCK_MINUTES * 60 * 1000) },
+            $unset: { otpHash: '', otpExpires: '' },
+          }
+        );
         return res.status(429).json({
           message: `تلاش‌های ناموفق زیاد — ${LOCK_MINUTES} دقیقه دیگر دوباره کد بگیرید`,
         });
       }
-      await user.save();
-      const left = MAX_VERIFY_ATTEMPTS - user.otpAttempts;
+      const left = MAX_VERIFY_ATTEMPTS - attempts;
       return res
         .status(400)
         .json({ message: `کد اشتباه است (${left} تلاش باقی مانده)` });
     }
 
-    // موفق — باطل‌کردن کد و ریست شمارنده‌ها
-    user.otpHash = undefined;
-    user.otpExpires = undefined;
-    user.otpAttempts = 0;
-    user.otpLockedUntil = null;
-    await user.save();
+    // ✅ موفق — باطل‌کردن کد و ریست شمارنده‌ها به‌صورت اتمیک.
+    // از findOneAndUpdate با شرط otpHash موجود استفاده می‌کنیم تا فقط یک درخواست
+    // همزمان «برنده» شود (اگر دو درخواست هم‌زمان با کد درست بیایند، فقط اولی
+    // کد را مصرف می‌کند و دومی کد را باطل‌شده می‌بیند).
+    const consumed = await User.findOneAndUpdate(
+      { _id: user._id, otpHash: { $ne: null } },
+      {
+        $set: { otpAttempts: 0, otpLockedUntil: null },
+        $unset: { otpHash: '', otpExpires: '' },
+      },
+      { new: true }
+    );
+    if (!consumed) {
+      // کد توسط درخواست همزمان دیگری مصرف شده یا منقضی شده است.
+      return res.status(400).json({ message: 'کد منقضی شده است' });
+    }
 
-    const token = sign(user);
+    const token = sign(consumed);
     // توکن در کوکی HttpOnly ست می‌شود (SEC-04) — برای مرورگر، غیرقابل دسترس به JS.
     res.cookie(TOKEN_COOKIE, token, tokenCookieOptions());
 
@@ -131,7 +153,7 @@ router.post('/verify-otp', async (req, res, next) => {
       // token برای سازگاری با کلاینت‌های غیرمرورگری/SSR هم برگردانده می‌شود،
       // ولی کلاینت مرورگری دیگر آن را در localStorage ذخیره نمی‌کند (از کوکی استفاده می‌شود).
       token,
-      user: { id: user._id, phone: user.phone, name: user.name, city: user.city, role: user.role },
+      user: { id: consumed._id, phone: consumed.phone, name: consumed.name, city: consumed.city, role: consumed.role },
     });
   } catch (err) {
     next(err);
