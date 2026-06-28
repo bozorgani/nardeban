@@ -47,14 +47,21 @@ export function AuthProvider({ children }) {
     );
   };
 
-  const logout = async () => {
+  // logout عادی فقط کوکی همین دستگاه را پاک می‌کند.
+  // logout({ all: true }) → /auth/logout-all که tokenVersion را +۱ و همهٔ
+  // نشست‌های فعال روی همهٔ دستگاه‌ها را باطل می‌کند (برای «گوشی‌ام گم شد»).
+  const logout = async (opts = {}) => {
     try {
-      await api('/auth/logout', { method: 'POST' }); // پاک‌کردن کوکی HttpOnly در سرور
+      await api(opts.all ? '/auth/logout-all' : '/auth/logout', { method: 'POST' });
     } catch {
       /* ignore */
     }
     setUser(null);
-    toast?.info('از حساب خود خارج شدید — به امید دیدار 👋');
+    toast?.info(
+      opts.all
+        ? 'از همهٔ دستگاه‌ها خارج شدید 🔒'
+        : 'از حساب خود خارج شدید — به امید دیدار 👋'
+    );
     // 🔒 پاک‌سازی کش صفحات در Service Worker تا صفحات احراز‌شدهٔ این کاربر
     // به کاربر بعدی روی همین دستگاه نشت نکند (نشت داده بین‌کاربری).
     try {

@@ -15,15 +15,40 @@ const isProd = process.env.NODE_ENV === 'production';
 const MAX_VERIFY_ATTEMPTS = 5;
 const LOCK_MINUTES = 15;
 
+// JWT شامل tv (tokenVersion) است تا revocation ممکن شود (SEC).
 const sign = (user) =>
-  jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '30d' });
+  jwt.sign({ id: user._id, tv: user.tokenVersion || 0 }, JWT_SECRET, { expiresIn: '30d' });
 
 // مرحله ۱: درخواست کد تایید
+// سقف درخواست کد per-phone (مستقل از IP) — ضد بمباران SMS با چرخش IP
+const MAX_OTP_PER_PHONE = 5;
+const OTP_PHONE_WINDOW_MS = 60 * 60 * 1000; // ۱ ساعت
+
 router.post('/request-otp', async (req, res, next) => {
   try {
     const { phone } = req.body;
     if (!/^09\d{9}$/.test(phone || ''))
       return res.status(400).json({ message: 'شماره موبایل معتبر نیست (مثال: 09123456789)' });
+
+    // 🔒 محدودیت per-phone (مستقل از IP): rate-limiter موجود فقط per-IP است؛
+    // مهاجم با چرخش IP می‌تواند یک شماره را با ده‌ها SMS بمباران کند (هزینهٔ مالی).
+    // اینجا پنجرهٔ زمانی per-phone را نگه می‌داریم و سقف را اعمال می‌کنیم.
+    {
+      const u = await User.findOne({ phone }).select(
+        '+otpRequestCount +otpRequestWindowStart'
+      );
+      const now = Date.now();
+      if (u) {
+        const winStart = u.otpRequestWindowStart?.getTime() || 0;
+        const inWindow = now - winStart < OTP_PHONE_WINDOW_MS;
+        if (inWindow && (u.otpRequestCount || 0) >= MAX_OTP_PER_PHONE) {
+          const mins = Math.ceil((OTP_PHONE_WINDOW_MS - (now - winStart)) / 60000);
+          return res.status(429).json({
+            message: `برای این شماره درخواست کد بیش از حد بوده — ${mins} دقیقه دیگر تلاش کنید`,
+          });
+        }
+      }
+    }
 
     const code = generateOtp(); // کد ۶ رقمی امن (SEC-07)
     const expires = new Date(Date.now() + 5 * 60 * 1000);
@@ -35,17 +60,30 @@ router.post('/request-otp', async (req, res, next) => {
       console.log(`🔑 [OTP] کد ${phone}: ${code}  (انقضا: ${expires.toLocaleTimeString('fa-IR')})`);
     }
 
-    await User.findOneAndUpdate(
-      { phone },
-      {
+    // به‌روزرسانی پنجرهٔ شمارش per-phone: اگر پنجره گذشته یا کاربر جدید است،
+    // پنجره را ریست و شمارنده را ۱ می‌گذاریم؛ وگرنه شمارنده را +۱ می‌کنیم.
+    const existing = await User.findOne({ phone }).select('+otpRequestWindowStart');
+    const now = Date.now();
+    const winStart = existing?.otpRequestWindowStart?.getTime() || 0;
+    const windowExpired = now - winStart >= OTP_PHONE_WINDOW_MS;
+
+    const update = {
+      $set: {
         phone,
         otpHash: hashOtp(code, phone), // فقط هش ذخیره می‌شود (SEC-08)
         otpExpires: expires,
         otpAttempts: 0, // ریست شمارندهٔ تلاش با هر کد جدید
         otpLockedUntil: null,
       },
-      { upsert: true, new: true }
-    );
+    };
+    if (windowExpired) {
+      update.$set.otpRequestWindowStart = new Date(now);
+      update.$set.otpRequestCount = 1;
+    } else {
+      update.$inc = { otpRequestCount: 1 };
+    }
+
+    await User.findOneAndUpdate({ phone }, update, { upsert: true, new: true });
 
     // ارسال کد با سرویس پیامک. در پروداکشن باید ارائه‌دهنده تنظیم شده باشد؛
     // در غیر این صورت sendOtp خطا می‌دهد و کد هرگز در پاسخ لو نمی‌رود (SEC-01).
@@ -146,13 +184,12 @@ router.post('/verify-otp', async (req, res, next) => {
     }
 
     const token = sign(consumed);
-    // توکن در کوکی HttpOnly ست می‌شود (SEC-04) — برای مرورگر، غیرقابل دسترس به JS.
+    // توکن فقط در کوکی HttpOnly ست می‌شود (SEC-04) — برای مرورگر، غیرقابل دسترس به JS.
+    // ⚠️ توکن دیگر در بدنهٔ پاسخ برنگردانده نمی‌شود؛ برگرداندنش HttpOnly را بی‌اثر
+    // می‌کرد و هر XSS می‌توانست توکن ۳۰ روزه را بدزدد (SEC).
     res.cookie(TOKEN_COOKIE, token, tokenCookieOptions());
 
     res.json({
-      // token برای سازگاری با کلاینت‌های غیرمرورگری/SSR هم برگردانده می‌شود،
-      // ولی کلاینت مرورگری دیگر آن را در localStorage ذخیره نمی‌کند (از کوکی استفاده می‌شود).
-      token,
       user: { id: consumed._id, phone: consumed.phone, name: consumed.name, city: consumed.city, role: consumed.role },
     });
   } catch (err) {
@@ -164,6 +201,18 @@ router.post('/verify-otp', async (req, res, next) => {
 router.post('/logout', (_req, res) => {
   res.clearCookie(TOKEN_COOKIE, { ...tokenCookieOptions(), maxAge: undefined });
   res.json({ ok: true });
+});
+
+// خروج از همهٔ دستگاه‌ها — با +۱ کردن tokenVersion همهٔ توکن‌های صادرشدهٔ قبلی
+// فوراً باطل می‌شوند (revocation واقعی). برای حالت «گوشی‌ام دزدیده شد».
+router.post('/logout-all', requireAuth, async (req, res, next) => {
+  try {
+    await User.updateOne({ _id: req.user._id }, { $inc: { tokenVersion: 1 } });
+    res.clearCookie(TOKEN_COOKIE, { ...tokenCookieOptions(), maxAge: undefined });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
 });
 
 // اطلاعات کاربر جاری — endpoint «وضعیت احراز هویت» (نه منبع محافظت‌شده).

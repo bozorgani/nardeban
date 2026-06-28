@@ -13,6 +13,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import { sanitizeRequest } from './middleware/sanitize.js';
+import { csrfProtection } from './middleware/csrf.js';
 import { globalLimiter, otpLimiter, verifyLimiter, writeLimiter } from './middleware/limiters.js';
 import { corsOptions } from './config/cors.js';
 import { UPLOAD_DIR } from './config/paths.js';
@@ -61,6 +62,10 @@ export function createApp() {
 
   // پارس بدنه‌ی JSON فقط برای مسیرهای API (تا با body صفحات Next تداخل نکند)
   app.use('/api', express.json({ limit: '2mb' }));
+
+  // محافظت CSRF: بررسی Origin/Referer روی متدهای تغییردهنده (SEC)
+  // مهم وقتی COOKIE_SAMESITE=none است (فرانت/API روی دامنهٔ متفاوت).
+  app.use('/api', csrfProtection);
 
   /* ---------- Rate Limiting ---------- */
   app.use('/api/', globalLimiter);

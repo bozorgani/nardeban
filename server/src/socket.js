@@ -57,8 +57,10 @@ export function initSocket(httpServer) {
         getTokenFromHandshake(socket) || socket.handshake.auth?.token;
       if (!token) return next(new Error('unauthorized'));
       const payload = jwt.verify(token, JWT_SECRET);
-      const user = await User.findById(payload.id).select('_id name phone');
+      const user = await User.findById(payload.id).select('_id name phone tokenVersion');
       if (!user) return next(new Error('unauthorized'));
+      // revocation: توکن باطل‌شده (بعد از logout-all) نباید سوکت باز کند
+      if ((payload.tv || 0) !== (user.tokenVersion || 0)) return next(new Error('unauthorized'));
       socket.userId = String(user._id);
       socket.userName = user.name || '';
       next();

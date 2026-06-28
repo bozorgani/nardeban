@@ -11,6 +11,10 @@ export async function requireAuth(req, res, next) {
     const payload = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(payload.id);
     if (!user) return res.status(401).json({ message: 'کاربر یافت نشد' });
+    // revocation: اگر نسخهٔ توکن با نسخهٔ فعلی کاربر نخواند، توکن باطل است
+    // (مثلاً بعد از «خروج از همهٔ دستگاه‌ها»). توکن‌های قدیمیِ بدون tv = 0 فرض می‌شوند.
+    if ((payload.tv || 0) !== (user.tokenVersion || 0))
+      return res.status(401).json({ message: 'نشست منقضی شده — دوباره وارد شوید', code: 'TOKEN_REVOKED' });
     if (user.isBlocked)
       return res.status(403).json({ message: 'حساب شما مسدود شده است', code: 'BLOCKED' });
 
