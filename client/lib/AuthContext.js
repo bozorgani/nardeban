@@ -30,10 +30,15 @@ export function AuthProvider({ children }) {
     refresh();
   }, [refresh]);
 
-  // login: سرور قبلاً کوکی را ست کرده؛ اینجا فقط وضعیت UI به‌روز می‌شود.
+  // login: سرور قبلاً کوکی را ست کرده؛ اینجا وضعیت UI را به‌روز می‌کنیم.
   // (پارامتر token برای سازگاری امضای قبلی نگه داشته شده ولی استفاده نمی‌شود.)
   const login = (_token, userData) => {
+    // ابتدا با دادهٔ verify (سریع) UI را به‌روز می‌کنیم تا کاربر منتظر نماند،
     setUser(userData);
+    // سپس refresh می‌زنیم تا پروفایل کامل (favorites/role/city) از /auth/me بیاید.
+    // verify فقط زیرمجموعه‌ای از فیلدها را برمی‌گرداند؛ بدون این، نشان‌شده‌ها و
+    // دسترسی ادمین تا رفرش بعدی صفحه ناقص می‌مانند.
+    refresh();
     toast?.success(
       userData?.name?.trim()
         ? `خوش آمدید، ${userData.name} 👋`

@@ -77,7 +77,7 @@ export default function NewAdWizard() {
   const [callEnabled, setCallEnabled] = useState(true);
 
   useEffect(() => {
-    if (!loading && !user) router.replace('/auth');
+    if (!loading && !user) router.replace('/auth?next=/new');
     if (user) setContactPhone((p) => p || user.phone);
   }, [loading, user, router]);
 

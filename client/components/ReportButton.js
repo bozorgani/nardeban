@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 import { useToast } from './Toast';
@@ -10,6 +10,7 @@ import { useToast } from './Toast';
 export default function ReportButton({ adId, ownerId }) {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
 
   const [open, setOpen] = useState(false);
@@ -30,7 +31,7 @@ export default function ReportButton({ adId, ownerId }) {
   }, [user, adId, isOwner]);
 
   const openModal = async () => {
-    if (!user) return router.push('/auth');
+    if (!user) return router.push(`/auth?next=${encodeURIComponent(pathname)}`);
     setOpen(true);
     if (!reasons.length) {
       try {

@@ -16,7 +16,7 @@ export default function FavoritesPage() {
   const [favs, setFavs] = useState(null);
 
   useEffect(() => {
-    if (!loading && !user) router.replace('/auth');
+    if (!loading && !user) router.replace('/auth?next=/favorites');
     if (user) api('/users/favorites').then((d) => setFavs(d.favorites)).catch(() => setFavs([]));
   }, [loading, user, router]);
 

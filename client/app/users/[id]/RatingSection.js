@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { api, timeAgo } from '../../../lib/api';
 import { useAuth } from '../../../lib/AuthContext';
 import { useToast } from '../../../components/Toast';
@@ -39,7 +39,9 @@ function StarPicker({ value, onChange, disabled }) {
 export default function RatingSection({ sellerId }) {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
+  const authNext = `/auth?next=${encodeURIComponent(pathname)}`;
 
   const [myRating, setMyRating] = useState(0);
   const [myComment, setMyComment] = useState('');
@@ -86,7 +88,7 @@ export default function RatingSection({ sellerId }) {
   }, [sellerId]);
 
   const submit = async () => {
-    if (!user) return router.push('/auth');
+    if (!user) return router.push(authNext);
     if (!myRating) return setMsg('ابتدا ستاره بدهید');
     setBusy(true);
     setMsg('');
@@ -140,7 +142,7 @@ export default function RatingSection({ sellerId }) {
 
           {!user ? (
             <button
-              onClick={() => router.push('/auth')}
+              onClick={() => router.push(authNext)}
               className="w-full rounded-xl border-2 border-brand py-2.5 text-sm font-bold text-brand transition hover:bg-brand-light"
             >
               برای امتیازدهی وارد شوید

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 import { useToast } from './Toast';
@@ -15,6 +15,7 @@ export default function SaveSearchButton({ catName }) {
   const { user } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
+  const pathname = usePathname();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -41,7 +42,12 @@ export default function SaveSearchButton({ catName }) {
   const label = parts.join(' در ') || 'جستجوی من';
 
   const save = async () => {
-    if (!user) return router.push('/auth');
+    if (!user) {
+      // بازگشت به همین جستجو (با فیلترهای فعلی) بعد از لاگین
+      const qs = params.toString();
+      const dest = qs ? `${pathname}?${qs}` : pathname;
+      return router.push(`/auth?next=${encodeURIComponent(dest)}`);
+    }
     setBusy(true);
     try {
       await api('/saved-searches', {

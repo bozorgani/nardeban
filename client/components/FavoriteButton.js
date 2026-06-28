@@ -1,18 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 
 export default function FavoriteButton({ adId }) {
   const { user, refresh } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const saved = user?.favorites?.some((f) => f === adId || f?._id === adId);
   const [busy, setBusy] = useState(false);
 
   const toggle = async () => {
-    if (!user) return router.push('/auth');
+    if (!user) return router.push(`/auth?next=${encodeURIComponent(pathname)}`);
     setBusy(true);
     try {
       await api(`/users/favorites/${adId}`, { method: 'POST' });

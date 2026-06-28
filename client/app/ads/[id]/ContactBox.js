@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { api } from '../../../lib/api';
 import { useAuth } from '../../../lib/AuthContext';
 import NamePrompt from '../../../components/NamePrompt';
@@ -22,20 +22,22 @@ const ChatIcon = (
 export default function ContactBox({ adId, ownerId, phone, callEnabled = true, chatEnabled = true }) {
   const { user } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
   const [show, setShow] = useState(false);
   const [busy, setBusy] = useState(false);
   const [askName, setAskName] = useState(false);
 
   const isOwner = user && String(user.id) === String(ownerId);
+  const authNext = `/auth?next=${encodeURIComponent(pathname)}`;
 
   const reveal = () => {
-    if (!user) return router.push('/auth');
+    if (!user) return router.push(authNext);
     setShow(true);
   };
 
   const startChat = async () => {
-    if (!user) return router.push('/auth'); // چت فقط با ورود
+    if (!user) return router.push(authNext); // چت فقط با ورود
     // برای چت داشتن نام الزامی است
     if (!user.name || !user.name.trim()) return setAskName(true);
     if (busy) return;

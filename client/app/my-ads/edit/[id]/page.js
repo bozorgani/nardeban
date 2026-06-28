@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { api, API_URL, digitsOnly, thumbUrl } from '../../../../lib/api';
 import { useAuth } from '../../../../lib/AuthContext';
@@ -24,6 +24,7 @@ const CONDITIONS = ['نو', 'در حد نو', 'کارکرده', 'نیاز به �
 export default function EditAdPage({ params }) {
   const { id } = use(params);
   const router = useRouter();
+  const pathname = usePathname();
   const toast = useToast();
   const { user, loading: authLoading } = useAuth();
 
@@ -58,8 +59,8 @@ export default function EditAdPage({ params }) {
   const [newPreviews, setNewPreviews] = useState([]);
 
   useEffect(() => {
-    if (!authLoading && !user) router.replace('/auth');
-  }, [authLoading, user, router]);
+    if (!authLoading && !user) router.replace(`/auth?next=${encodeURIComponent(pathname)}`);
+  }, [authLoading, user, router, pathname]);
 
   useEffect(() => {
     api('/categories').then((d) => setTree(d.tree || [])).catch(() => {});

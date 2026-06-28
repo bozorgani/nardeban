@@ -1,12 +1,26 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { api, digitsOnly } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 
-export default function AuthPage() {
+/**
+ * مقصد امن بعد از لاگین:
+ * فقط مسیرهای داخلیِ نسبی (شروع با یک «/» و نه «//») مجازند تا از
+ * open-redirect به دامنهٔ مهاجم (مثل //evil.com یا https://evil.com) جلوگیری شود.
+ */
+function safeNext(next) {
+  if (!next || typeof next !== 'string') return '/';
+  if (!next.startsWith('/') || next.startsWith('//')) return '/';
+  if (next.startsWith('/auth')) return '/'; // جلوگیری از حلقه به خود صفحهٔ لاگین
+  return next;
+}
+
+function AuthForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const next = safeNext(params.get('next'));
   const { login } = useAuth();
   const [step, setStep] = useState(1);
   const [phone, setPhone] = useState('');
@@ -61,7 +75,7 @@ export default function AuthPage() {
         body: { phone: digitsOnly(phone), code: digitsOnly(code) },
       });
       login(data.token, data.user);
-      router.push('/');
+      router.push(next); // بازگشت به مقصد اصلی (?next=) یا خانه
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -166,5 +180,14 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// useSearchParams نیاز به مرز Suspense دارد (Next.js App Router)
+export default function AuthPage() {
+  return (
+    <Suspense fallback={null}>
+      <AuthForm />
+    </Suspense>
   );
 }

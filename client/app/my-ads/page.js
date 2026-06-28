@@ -36,7 +36,7 @@ export default function MyAdsPage() {
   const [tab, setTab] = useState('all');
 
   useEffect(() => {
-    if (!loading && !user) router.replace('/auth');
+    if (!loading && !user) router.replace('/auth?next=/my-ads');
     if (user) {
       api('/ads/mine').then((d) => setAds(d.ads)).catch(() => setAds([]));
       api('/chat/conversations')

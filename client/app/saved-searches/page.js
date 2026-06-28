@@ -29,7 +29,7 @@ export default function SavedSearchesPage() {
     api('/saved-searches').then(setData).catch(() => setData({ searches: [] }));
 
   useEffect(() => {
-    if (!loading && !user) router.replace('/auth');
+    if (!loading && !user) router.replace('/auth?next=/saved-searches');
     if (user) load();
   }, [loading, user, router]);
 

@@ -217,7 +217,7 @@ export default function MePage() {
           </div>
           <div className="-mt-8 px-6 pb-8">
             <Link
-              href="/auth"
+              href="/auth?next=/me"
               className="block w-full rounded-2xl bg-white py-4 text-center text-sm font-extrabold text-brand shadow-xl ring-1 ring-gray-100 transition hover:shadow-2xl"
             >
               ورود / ثبت‌نام با شماره موبایل
