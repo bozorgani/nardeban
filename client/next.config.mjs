@@ -49,20 +49,46 @@ const nextConfig = {
   // نکته: 'unsafe-inline' برای اسکریپت محافظ تم (FOUC) و بوت‌استرپ Next لازم است.
   // ------------------------------------------------------------------------
   async headers() {
+    // origin واقعی API/WebSocket از env (در پروداکشن = همان دامنهٔ سایت، مثلاً https://befrosh.ir).
+    // اگر API روی دامنهٔ دیگری باشد، همان‌جا هم به allowlist اضافه می‌شود.
+    let apiOrigin = '';
+    let wsOrigin = '';
+    try {
+      const u = new URL(process.env.NEXT_PUBLIC_API_URL || '');
+      apiOrigin = u.origin;
+      wsOrigin = `${u.protocol === 'https:' ? 'wss' : 'ws'}://${u.host}`;
+    } catch {
+      /* env تنظیم نشده (build محلی) — فقط 'self' استفاده می‌شود */
+    }
+
+    // allowlist دقیق — به‌جای wildcardهای باز (https:/http:/ws:/wss:)
+    const imgSrc = ["'self'", 'data:', 'blob:', 'https://*.tile.openstreetmap.org', apiOrigin]
+      .filter(Boolean)
+      .join(' ');
+    const connectSrc = [
+      "'self'",
+      apiOrigin,
+      wsOrigin,
+      'https://nominatim.openstreetmap.org',
+      'https://cloudflareinsights.com', // beacon آنالیتیکس کلودفلر
+    ]
+      .filter(Boolean)
+      .join(' ');
+
     const csp = [
       "default-src 'self'",
       "base-uri 'self'",
       "object-src 'none'",
       "frame-ancestors 'none'",
       "form-action 'self'",
-      // Cloudflare Web Analytics (beacon) — توسط Cloudflare به‌صورت خودکار
-      // تزریق می‌شود؛ بدون این، CSP آن را بلاک و در کنسول خطا ثبت می‌کند.
+      // Cloudflare Web Analytics (beacon) — توسط Cloudflare به‌صورت خودکار تزریق می‌شود.
       "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline'",
       "font-src 'self' data:",
-      "img-src 'self' data: blob: https: http:",
-      // connect-src شامل https: است که cloudflareinsights را هم پوشش می‌دهد
-      "connect-src 'self' https: wss: ws:",
+      // 🔒 محدود به origin سایت/API + کاشی‌های نقشه (نه هر میزبان https/http)
+      `img-src ${imgSrc}`,
+      // 🔒 محدود به origin سایت/API + WebSocket همان origin + Nominatim + Cloudflare
+      `connect-src ${connectSrc}`,
       "worker-src 'self' blob:",
       "manifest-src 'self'",
     ].join('; ');
