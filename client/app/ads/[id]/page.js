@@ -1,15 +1,17 @@
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { cache, Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
-import FavoriteButton from '../../../components/FavoriteButton';
-import AdMap from '../../../components/AdMap';
-import ContactBox from './ContactBox';
-import Gallery from './Gallery';
-import ReportButton from '../../../components/ReportButton';
-import ShareButton from '../../../components/ShareButton';
 import SimilarAds from './SimilarAds';
-import ViewCounter from './ViewCounter';
+
+const FavoriteButton = dynamic(() => import('../../../components/FavoriteButton'));
+const AdMap = dynamic(() => import('../../../components/AdMap'));
+const ContactBox = dynamic(() => import('./ContactBox'));
+const Gallery = dynamic(() => import('./Gallery'));
+const ReportButton = dynamic(() => import('../../../components/ReportButton'));
+const ShareButton = dynamic(() => import('../../../components/ShareButton'));
+const ViewCounter = dynamic(() => import('./ViewCounter'), { ssr: false });
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 

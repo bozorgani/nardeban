@@ -5,12 +5,11 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../lib/AuthContext';
-import { api } from '../lib/api';
-import { useSocket } from '../lib/useSocket';
 import { cityLabel, parseCities } from '../lib/cities';
 
 const CityModal = dynamic(() => import('./CityModal'));
 const ThemeToggle = dynamic(() => import('./ThemeToggle'));
+const HeaderChatLink = dynamic(() => import('./HeaderChatLink'));
 
 function ChatLink() {
   const { user } = useAuth();
@@ -230,7 +229,7 @@ export default function Header() {
               👑 <span className="hidden lg:inline">پنل مدیریت</span>
             </Link>
           )}
-          <ChatLink />
+          <HeaderChatLink />
           {user ? (
             <div className="relative" ref={menuRef}>
               <button
