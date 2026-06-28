@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { api, API_URL, digitsOnly, imgUrl } from '../../../../lib/api';
+import { api, API_URL, digitsOnly, thumbUrl } from '../../../../lib/api';
 import { useAuth } from '../../../../lib/AuthContext';
 import { useToast } from '../../../../components/Toast';
 import CategoryFields from '../../../../components/CategoryFields';
@@ -222,7 +222,7 @@ export default function EditAdPage({ params }) {
                 <button type="button" onClick={() => makeMainOld(i)} title="عکس اصلی شود"
                   className={`block h-full w-full overflow-hidden rounded-2xl border-2 ${i === 0 ? 'border-brand ring-2 ring-brand/30' : 'border-gray-200 hover:border-gray-400'}`}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={imgUrl(src)} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                  <img src={thumbUrl(src)} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                 </button>
                 {i === 0 && (
                   <span className="absolute bottom-1 right-1 rounded-md bg-brand px-1.5 py-0.5 text-[9px] font-bold text-white">★ اصلی</span>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { api, formatPrice, timeAgo, imgUrl } from '../../lib/api';
+import { api, formatPrice, timeAgo, thumbUrl } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import { useToast } from '../../components/Toast';
 import AdChats from './AdChats';
@@ -147,7 +147,7 @@ export default function MyAdsPage() {
         <div className="space-y-4">
           {filtered.map((ad) => {
             const st = STATUS[ad.status] || STATUS.active;
-            const img = ad.images?.[0] ? imgUrl(ad.images[0]) : null;
+            const img = ad.images?.[0] ? thumbUrl(ad.images[0]) : null;
             return (
               <div key={ad._id} className="fade-up overflow-hidden rounded-3xl border border-gray-200 bg-white transition hover:shadow-md">
                 <div className="flex gap-4 p-4">

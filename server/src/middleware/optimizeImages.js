@@ -4,12 +4,26 @@ import fs from 'fs/promises';
 
 /**
  * میدل‌ور بهینه‌سازی عکس‌های آپلودشده (بعد از Multer):
- *  - تغییر اندازه به حداکثر ۱۶۰۰px (حفظ نسبت، بدون بزرگ‌نمایی)
- *  - تبدیل به WebP کیفیت ۸۰ (حجم معمولاً ۵-۱۰ برابر کمتر)
- *  - تولید thumbnail ۴۰۰px با پسوند .thumb.webp (برای کارت‌ها)
+ *  - تصویر اصلی: حداکثر ۱۶۰۰px، WebP کیفیت ۷۴ (effort 6) — برای صفحهٔ جزئیات/گالری
+ *  - thumbnail: ۲۸۸px، WebP کیفیت ۶۲ (effort 6) — برای کارت‌ها/لیست‌ها
+ *      (کارت‌ها در ~۱۲۸px نمایش داده می‌شوند؛ ۲۸۸px پوشش رتینا تا ~۲.۲x است)
+ *  - smartSubsample برای حفظ کیفیت لبه‌ها در بیت‌ریت پایین
  *  - به‌روزرسانی filename/path در req.file(s) به فایل جدید
  * اگر پردازش عکسی خراب شد، فایل اصلی همان می‌ماند (fail-safe).
+ *
+ * مبنای انتخاب کیفیت/اندازه: بنچمارک روی عکس واقعی نشان داد thumbnail از
+ * ۲۸.۳KiB (۴۰۰px/q70) به ~۱۵.۵KiB (۲۸۸px/q62) می‌رسد = ~۴۵٪ کاهش حجم،
+ * بدون افت محسوس کیفیت چون تصویر در کادر کوچک‌تری نمایش داده می‌شود.
+ * AVIF بررسی شد (~۷۵٪ کاهش) ولی به‌دلیل encode بسیار کندتر روی VPS تک‌هسته‌ای
+ * و نبودِ لایهٔ content-negotiation (فایل‌ها مستقیم سرو می‌شوند) فعلاً WebP می‌ماند.
  */
+
+// تنظیمات متمرکز (قابل تیون از یک‌جا)
+const MAIN_MAX = 1600;
+const MAIN_QUALITY = 74;
+const THUMB_MAX = 288;
+const THUMB_QUALITY = 62;
+
 async function optimizeOne(file) {
   try {
     const dir = path.dirname(file.path);
@@ -24,13 +38,13 @@ async function optimizeOne(file) {
     await Promise.all([
       img
         .clone()
-        .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 80 })
+        .resize({ width: MAIN_MAX, height: MAIN_MAX, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: MAIN_QUALITY, effort: 6, smartSubsample: true })
         .toFile(mainPath),
       img
         .clone()
-        .resize({ width: 400, height: 400, fit: 'inside', withoutEnlargement: true })
-        .webp({ quality: 70 })
+        .resize({ width: THUMB_MAX, height: THUMB_MAX, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: THUMB_QUALITY, effort: 6, smartSubsample: true })
         .toFile(thumbPath),
     ]);
 

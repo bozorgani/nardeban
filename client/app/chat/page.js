@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { api, API_URL, imgUrl, timeAgo } from '../../lib/api';
+import { api, API_URL, imgUrl, thumbUrl, timeAgo } from '../../lib/api';
 import { useAuth } from '../../lib/AuthContext';
 import { useSocket } from '../../lib/useSocket';
 import { useToast } from '../../components/Toast';
@@ -73,7 +73,7 @@ function ConversationList({ conversations, activeId, onPick, onlineMap }) {
                 <div className="h-full w-full overflow-hidden rounded-xl bg-gray-100">
                   {c.ad?.images?.[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={imgUrl(c.ad.images[0])} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                    <img src={thumbUrl(c.ad.images[0])} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center text-xl">📦</div>
                   )}
@@ -375,7 +375,7 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
             <div className="h-full w-full overflow-hidden rounded-xl bg-gray-100">
               {conv.ad?.images?.[0] ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={imgUrl(conv.ad.images[0])} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                <img src={thumbUrl(conv.ad.images[0])} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-lg">📦</div>
               )}
