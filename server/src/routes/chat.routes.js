@@ -30,17 +30,37 @@ router.get('/conversations', async (req, res, next) => {
     const uid = req.user._id;
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 30));
+    const cursor = parseCursor(req.query.cursor);
     const filter = { $or: [{ buyer: uid }, { seller: uid }] };
 
+    // حالت جدید: cursor-based (ترجیحی برای dataset بزرگ)
+    // حالت قدیمی: page/limit با skip برای backward compatibility
+    const listQuery = cursor
+      ? {
+          ...filter,
+          $and: [
+            {
+              $or: [
+                { lastMessageAt: { $lt: cursor.date } },
+                { lastMessageAt: cursor.date, _id: { $lt: cursor.id } },
+              ],
+            },
+          ],
+        }
+      : filter;
+
+    const listPromise = Conversation.find(listQuery)
+      .sort({ lastMessageAt: -1, _id: -1 })
+      .limit(limit)
+      .populate('ad', 'title images price isFree status')
+      .populate('buyer', 'name phone')
+      .populate('seller', 'name phone')
+      .lean();
+
+    if (!cursor) listPromise.skip((page - 1) * limit);
+
     const [convs, total, allForUnread] = await Promise.all([
-      Conversation.find(filter)
-        .sort({ lastMessageAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .populate('ad', 'title images price isFree status')
-        .populate('buyer', 'name phone')
-        .populate('seller', 'name phone')
-        .lean(),
+      listPromise,
       Conversation.countDocuments(filter),
       // فقط فیلدهای لازم برای جمع total unread — سبک
       Conversation.find(filter, 'buyer seller unreadBuyer unreadSeller').lean(),

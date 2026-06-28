@@ -197,15 +197,28 @@ router.get('/:id/reviews', async (req, res, next) => {
 
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(30, parseInt(req.query.limit) || 10);
+    const cursor = parseCursor(req.query.cursor);
+    const reviewFilter = { seller: id };
+    const reviewListFilter = cursor
+      ? {
+          ...reviewFilter,
+          $or: [
+            { createdAt: { $lt: cursor.date } },
+            { createdAt: cursor.date, _id: { $lt: cursor.id } },
+          ],
+        }
+      : reviewFilter;
+
+    const reviewQuery = Review.find(reviewListFilter)
+      .sort({ createdAt: -1, _id: -1 })
+      .limit(limit)
+      .populate('rater', 'name')
+      .lean();
+    if (!cursor) reviewQuery.skip((page - 1) * limit);
 
     const [reviews, total] = await Promise.all([
-      Review.find({ seller: id })
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .populate('rater', 'name')
-        .lean(),
-      Review.countDocuments({ seller: id }),
+      reviewQuery,
+      Review.countDocuments(reviewFilter),
     ]);
 
     res.json({

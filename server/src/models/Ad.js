@@ -40,8 +40,21 @@ const adSchema = new mongoose.Schema(
 adSchema.index({ title: 'text', description: 'text' });
 adSchema.index({ createdAt: -1 });
 // ایندکس‌های مرکب برای کوئری لیست (status همیشه در فیلتر هست)
+// ------------------------------------------------------------------
+// ۱) لیست عمومی بر اساس جدیدترین‌ها
 adSchema.index({ status: 1, createdAt: -1 });
+// ۲) فیلتر شهر + جدیدترین‌ها
 adSchema.index({ status: 1, city: 1, createdAt: -1 });
+// ۳) فیلتر دسته + جدیدترین‌ها
 adSchema.index({ status: 1, category: 1, createdAt: -1 });
+// ۴) آگهی‌های مشابه: status + category + city + createdAt
+//    تا کوئری same-city در /ads/:id/similar کاملاً ایندکس‌محور بماند.
+adSchema.index({ status: 1, category: 1, city: 1, createdAt: -1 });
+// ۵) sort ارزان‌ترین/گران‌ترین در لیست عمومی
+//    چون status همیشه در filter هست، price باید ستون دوم باشد.
+adSchema.index({ status: 1, price: 1 });
+adSchema.index({ status: 1, price: -1 });
+// ۶) /ads/mine → فیلتر owner + مرتب‌سازی createdAt
+adSchema.index({ owner: 1, createdAt: -1 });
 
 export default mongoose.model('Ad', adSchema);

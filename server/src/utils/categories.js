@@ -3,27 +3,34 @@ import Category from '../models/Category.js';
 /**
  * ایندکس درون‌حافظه‌ای دسته‌بندی‌ها (BE-05)
  * ----------------------------------------------------------------------------
- * به‌جای اجرای BFS دیتابیس برای هر جستجوی ذخیره‌شده (N+1)، یک‌بار همهٔ دسته‌ها
- * را می‌خوانیم و نوادگان هر slug را در حافظه محاسبه می‌کنیم.
+ * به‌جای اجرای BFS دیتابیس برای هر جستجوی وابسته به دسته‌بندی، یک‌بار همهٔ
+ * دسته‌ها را می‌خوانیم و نوادگان هر دسته را در حافظه محاسبه می‌کنیم.
  *
- * خروجی: تابع descendantIdsBySlug(slug) → آرایه‌ای از ObjectIdها (خود دسته + همهٔ نوادگان)
+ * خروجی:
+ *   - descendantIdsBySlug(slug)
+ *   - descendantIdsById(id)
+ *
+ * نکتهٔ معماری:
+ *   savedSearch قبلاً از نسخهٔ slug-based استفاده می‌کرد. حالا ad.routes هم به
+ *   همین utility مشترک مهاجرت می‌کند تا منطق descendants فقط یک‌جا نگه‌داری شود.
  */
 export async function buildCategoryIndex() {
   const cats = await Category.find().select('_id slug parent').lean();
 
   const bySlug = new Map();
+  const byId = new Map();
   const childrenByParent = new Map(); // parentId(string) → [cat]
 
   for (const c of cats) {
     bySlug.set(c.slug, c);
+    byId.set(String(c._id), c);
     const key = c.parent ? String(c.parent) : 'root';
     if (!childrenByParent.has(key)) childrenByParent.set(key, []);
     childrenByParent.get(key).push(c);
   }
 
   /** خود دسته + همهٔ نوادگان (هر عمقی) — از حافظه، بدون کوئری اضافه. */
-  function descendantIdsBySlug(slug) {
-    const root = bySlug.get(slug);
+  function descendantIdsFromNode(root) {
     if (!root) return [];
     const ids = [root._id];
     let frontier = [String(root._id)];
@@ -41,5 +48,17 @@ export async function buildCategoryIndex() {
     return ids;
   }
 
-  return { descendantIdsBySlug };
+  function descendantIdsBySlug(slug) {
+    return descendantIdsFromNode(bySlug.get(slug));
+  }
+
+  function descendantIdsById(id) {
+    return descendantIdsFromNode(byId.get(String(id)));
+  }
+
+  function getById(id) {
+    return byId.get(String(id)) || null;
+  }
+
+  return { descendantIdsBySlug, descendantIdsById, getById };
 }

@@ -290,23 +290,18 @@ router.get('/:id/similar', async (req, res, next) => {
 
     let ads = [...sameCity, ...others];
 
-    // اگر زیردسته کم‌آگهی بود → fallback به کل شاخه دسته ریشه (سطح ۱)
+    // اگر زیردسته کم‌آگهی بود → fallback به کل شاخه دستهٔ ریشه
     if (ads.length < 3) {
-      // بالا رفتن تا ریشه
-      let root = await Category.findById(ad.category).lean();
+      // این منطق قبلاً با چند round-trip و BFS ترتیبی روی DB اجرا می‌شد.
+      // حالا از همان category index کش‌شدهٔ مشترک استفاده می‌کنیم.
+      const catIndex = await buildCategoryIndex();
+      let root = catIndex.getById(ad.category);
       let guard = 0;
       while (root?.parent && guard++ < 10) {
-        root = await Category.findById(root.parent).lean();
+        root = catIndex.getById(root.parent);
       }
       if (root) {
-        // همه نوادگان ریشه (BFS)
-        const ids = [root._id];
-        let frontier = [root._id];
-        while (frontier.length) {
-          const children = await Category.find({ parent: { $in: frontier } }).select('_id');
-          frontier = children.map((c) => c._id);
-          ids.push(...frontier);
-        }
+        const ids = catIndex.descendantIdsById(root._id);
         const excluded = new Set(ads.map((a) => String(a._id)));
         const more = await Ad.find({
           _id: { $ne: ad._id },
