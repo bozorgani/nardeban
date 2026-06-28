@@ -1,0 +1,97 @@
+/* ========================================================================== */
+/*  CSS غیر بحرانی — بعد از hydrate لود می‌شود                                */
+/* ========================================================================== */
+
+/* اسکرول‌بار ظریف */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* انیمیشن ظاهر شدن کارت‌ها */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fade-up {
+  animation: fadeUp 0.25s ease both;
+}
+
+/* انیمیشن‌های Toast و دیالوگ */
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.toast-in { animation: toastIn 0.28s cubic-bezier(0.21, 1.02, 0.73, 1) both; }
+
+@keyframes dialogIn {
+  from { opacity: 0; transform: scale(0.92) translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.dialog-in { animation: dialogIn 0.22s cubic-bezier(0.21, 1.02, 0.73, 1) both; }
+
+/* ================================================================== */
+/*  🌙 حالت تاریک (Dark Mode)                                          */
+/* ================================================================== */
+.dark { color-scheme: dark; }
+
+.dark body {
+  background: #0e1626;
+  color: #e2e8f0;
+}
+
+.dark .bg-white { background-color: #161f30; }
+.dark .bg-white\/95,
+.dark .bg-white\/90 { background-color: rgba(14, 22, 38, 0.9); }
+.dark .bg-gray-50 { background-color: #1b2538; }
+.dark .bg-gray-100 { background-color: #202b40; }
+.dark .bg-gray-50\/50,
+.dark .bg-gray-50\/60,
+.dark .bg-gray-50\/70,
+.dark .bg-gray-50\/80 { background-color: #1b2538; }
+.dark .bg-gray-100\/60,
+.dark .bg-gray-100\/70 { background-color: #202b40; }
+.dark .bg-gray-200\/70 { background-color: #283449; }
+.dark .hover\:bg-gray-50\/70:hover,
+.dark .hover\:bg-gray-50\/80:hover { background-color: #1b2538; }
+.dark .hover\:bg-gray-100\/60:hover,
+.dark .hover\:bg-gray-100\/70:hover { background-color: #202b40; }
+.dark .bg-gray-200 { background-color: #283449; }
+.dark .bg-gray-300 { background-color: #334155; }
+
+.dark .text-gray-900 { color: #f1f5f9; }
+.dark .text-gray-800 { color: #e2e8f0; }
+.dark .text-gray-700 { color: #cbd5e1; }
+.dark .text-gray-600 { color: #b0bcca; }
+.dark .text-gray-500 { color: #94a3b8; }
+.dark .text-gray-400 { color: #7c8aa0; }
+.dark .text-gray-300 { color: #5b6b82; }
+.dark .text-gray-200 { color: #46576d; }
+
+.dark .border-gray-50 { border-color: #1f2937; }
+.dark .border-gray-100 { border-color: #243044; }
+.dark .border-gray-200 { border-color: #2c384e; }
+.dark .border-gray-300 { border-color: #3a485f; }
+.dark .border-gray-400 { border-color: #4b5a72; }
+
+.dark .divide-gray-50 > :not([hidden]) ~ :not([hidden]) { border-color: #1f2937; }
+.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: #243044; }
+.dark .ring-white { --tw-ring-color: #0e1626; }
+.dark .from-gray-50 { --tw-gradient-from: #1b2538 var(--tw-gradient-from-position); }
+.dark .to-gray-200 { --tw-gradient-to: #283449 var(--tw-gradient-to-position); }
+.dark ::-webkit-scrollbar-thumb { background: #334155; }
+.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+.dark ::selection { background: rgba(166, 38, 38, 0.45); color: #fff; }
