@@ -16,21 +16,12 @@ import { API_URL } from '../lib/api';
 const cacheKey = (query) => `feed:${query || 'home'}`;
 
 export default function AdFeed({ initialAds, total, pages, query }) {
-  // اگر برای همین query اسنپ‌شات کش‌شده داریم (بازگشت از صفحهٔ آگهی) → بازیابی فوری
-  const restored =
-    typeof window !== 'undefined'
-      ? (() => {
-          try {
-            const raw = sessionStorage.getItem(cacheKey(query));
-            return raw ? JSON.parse(raw) : null;
-          } catch {
-            return null;
-          }
-        })()
-      : null;
-
-  const [ads, setAds] = useState(restored?.ads?.length ? restored.ads : initialAds);
-  const [page, setPage] = useState(restored?.page || 1);
+  // ⚠️ Hydration-safe: اولین رندر کلاینت باید دقیقاً مطابق HTML سرور باشد،
+  // پس state اولیه همیشه از initialAds (همان SSR) شروع می‌شود — نه از
+  // sessionStorage. بازیابی اسنپ‌شات کش‌شده در useEffect (بعد از mount) انجام
+  // می‌شود تا mismatch و پرش تصویری رخ ندهد.
+  const [ads, setAds] = useState(initialAds);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const sentinelRef = useRef(null);
@@ -58,13 +49,25 @@ export default function AdFeed({ initialAds, total, pages, query }) {
     };
   }, [ads, page, query]);
 
-  // بازیابی موقعیت اسکرول پس از mount (اگر از کش بازگشتیم)
+  // بازیابی اسنپ‌شات کش‌شده + موقعیت اسکرول پس از mount (اگر از صفحهٔ آگهی برگشتیم).
+  // این کار بعد از hydration انجام می‌شود تا رندر اول با سرور یکسان بماند (UX-07).
   useEffect(() => {
-    if (restored?.scrollY) {
-      // بعد از رندر شدن کارت‌ها اسکرول را برگردان
-      requestAnimationFrame(() => window.scrollTo(0, restored.scrollY));
+    let restored = null;
+    try {
+      const raw = sessionStorage.getItem(cacheKey(query));
+      restored = raw ? JSON.parse(raw) : null;
+    } catch {
+      restored = null;
     }
-    // فقط یک‌بار هنگام mount
+    if (restored?.ads?.length) {
+      setAds(restored.ads);
+      setPage(restored.page || 1);
+      if (restored.scrollY) {
+        // بعد از رندر شدن کارت‌های بازیابی‌شده، اسکرول را برگردان
+        requestAnimationFrame(() => window.scrollTo(0, restored.scrollY));
+      }
+    }
+    // فقط یک‌بار هنگام mount برای همین query
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
