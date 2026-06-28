@@ -27,7 +27,23 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    refresh();
+    // احراز هویت برای first paint بحرانی نیست؛ آن را بعد از اولین رنگ‌آمیزی
+    // (idle/timeout) شروع می‌کنیم تا parse + hydration اولیه سبک‌تر شود.
+    let cancelled = false;
+    const run = () => {
+      if (!cancelled) refresh();
+    };
+    const id = window.requestIdleCallback
+      ? window.requestIdleCallback(run, { timeout: 1200 })
+      : setTimeout(run, 250);
+    return () => {
+      cancelled = true;
+      if (window.cancelIdleCallback && typeof id === 'number') {
+        try { window.cancelIdleCallback(id); } catch { clearTimeout(id); }
+      } else {
+        clearTimeout(id);
+      }
+    };
   }, [refresh]);
 
   // login: سرور قبلاً کوکی را ست کرده؛ اینجا وضعیت UI را به‌روز می‌کنیم.

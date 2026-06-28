@@ -16,14 +16,27 @@ export default function NonCriticalStyles() {
   useEffect(() => {
     if (document.getElementById('noncritical-styles')) return;
 
-    const link = document.createElement('link');
-    link.id = 'noncritical-styles';
-    link.rel = 'stylesheet';
-    link.href = '/styles/noncritical.css';
-    document.head.appendChild(link);
+    const inject = () => {
+      if (document.getElementById('noncritical-styles')) return;
+      const link = document.createElement('link');
+      link.id = 'noncritical-styles';
+      link.rel = 'stylesheet';
+      link.href = '/styles/noncritical.css';
+      document.head.appendChild(link);
+    };
+
+    // این CSS برای first paint لازم نیست؛ پس تا idle browser صبر می‌کنیم.
+    const id = window.requestIdleCallback
+      ? window.requestIdleCallback(inject, { timeout: 1500 })
+      : setTimeout(inject, 200);
 
     return () => {
-      // عمداً حذف نمی‌کنیم: این استایل باید در کل عمر SPA باقی بماند.
+      if (window.cancelIdleCallback && typeof id === 'number') {
+        try { window.cancelIdleCallback(id); } catch { clearTimeout(id); }
+      } else {
+        clearTimeout(id);
+      }
+      // عمداً link را حذف نمی‌کنیم: این استایل باید در کل عمر SPA باقی بماند.
     };
   }, []);
 

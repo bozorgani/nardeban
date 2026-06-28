@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useRef, useState } from 'react';
@@ -7,8 +8,9 @@ import { useAuth } from '../lib/AuthContext';
 import { api } from '../lib/api';
 import { useSocket } from '../lib/useSocket';
 import { cityLabel, parseCities } from '../lib/cities';
-import CityModal from './CityModal';
-import ThemeToggle from './ThemeToggle';
+
+const CityModal = dynamic(() => import('./CityModal'));
+const ThemeToggle = dynamic(() => import('./ThemeToggle'));
 
 function ChatLink() {
   const { user } = useAuth();

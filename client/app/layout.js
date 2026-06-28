@@ -1,5 +1,6 @@
 import './globals.css';
 import localFont from 'next/font/local';
+import dynamic from 'next/dynamic';
 import { AuthProvider } from '../lib/AuthContext';
 
 // فونت وزیرمتن خودمیزبان (UX-09) — بدون CDN، بهینه، بدون FOUC
