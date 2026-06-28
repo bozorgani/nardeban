@@ -8,7 +8,7 @@
  *  - API: همیشه Network-Only (داده زنده) — هرگز کش نمی‌شود
  * ------------------------------------------------------------------ */
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const STATIC_CACHE = `befrosh-static-${VERSION}`;
 const PAGE_CACHE = `befrosh-pages-${VERSION}`;
 const IMG_CACHE = `befrosh-imgs-${VERSION}`;
@@ -81,11 +81,21 @@ self.addEventListener('push', (event) => {
   }
 
   const title = data.title || 'بفروش';
+  // 🔔 گروه‌بندی نوتیفیکیشن (tag):
+  //  - اگر سرور tag بفرستد (مثل conv-<id> یا search-<id>) → همان استفاده می‌شود
+  //    (پیام‌های یک گفتگو روی هم جایگزین می‌شوند، که درست است).
+  //  - اگر tag نبود ولی convId هست → chat-<convId> (هر گفتگو جدا).
+  //  - اگر هیچ‌کدام نبود → tag یکتا تا نوتیفیکیشن‌های نامرتبط روی هم collapse نشوند
+  //    (قبلاً fallback ثابت 'befrosh' همهٔ پیام‌ها را با هم جایگزین می‌کرد = پسرفت UX).
+  const tag =
+    data.tag ||
+    (data.convId ? `chat-${data.convId}` : `befrosh-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`);
+
   const options = {
     body: data.adTitle ? `${data.body}\n📦 ${data.adTitle}` : data.body || '',
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-96.png',
-    tag: data.tag || 'befrosh', // پیام‌های یک گفتگو روی هم جایگزین می‌شوند
+    tag,
     renotify: true,
     dir: 'rtl',
     lang: 'fa',

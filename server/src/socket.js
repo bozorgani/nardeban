@@ -144,6 +144,7 @@ export function initSocket(httpServer) {
             title: `پیام جدید از ${sender?.name || 'کاربر بفروش'}`,
             body: body.length > 80 ? body.slice(0, 80) + '…' : body,
             tag: `conv-${convId}`, // پیام‌های یک گفتگو روی هم جایگزین شوند
+            convId: String(convId), // fallback سمت SW اگر tag حذف شود + deep-link
             url: `/chat?c=${convId}`,
             adTitle: ad?.title || '',
           }).catch(() => {});
