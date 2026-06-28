@@ -9,7 +9,10 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 // generateMetadata و هم در خود صفحه صدا زده شود (حذف fetch دوبارهٔ پروفایل).
 const getProfile = cache(async (id) => {
   try {
-    const res = await fetch(`${API}/api/users/${id}/profile`, { cache: 'no-store' });
+    // این صفحه عمومی است و محتوای آن لحظه‌به‌لحظه بحرانی نیست؛ no-store باعث
+    // می‌شد HTML صفحه غیرقابل بازگشت از bfcache/restore-friendly شود.
+    // با revalidate کوتاه، هم UX back/forward بهتر می‌شود و هم داده خیلی کهنه نمی‌ماند.
+    const res = await fetch(`${API}/api/users/${id}/profile`, { next: { revalidate: 60 } });
     if (!res.ok) return null;
     return res.json();
   } catch {

@@ -44,8 +44,12 @@ const getAd = cache(async (id) => {
     // توکن کاربر از کوکی → مالک/ادمین آگهی pending/rejected خود را هم می‌بیند
     const cookieStore = await cookies();
     const token = cookieStore.get('nardeban_token')?.value;
+    // آگهی عمومیِ فعال برای عموم می‌تواند با revalidate کوتاه کش شود، اما اگر
+    // کوکی auth داریم (مالک/ادمین ممکن است pending/rejected را ببیند) باید تازه
+    // بماند. این تفکیک، نیاز امنیتی را حفظ می‌کند و برای بازدیدکنندهٔ عمومی از
+    // no-store غیرضروری جلوگیری می‌کند.
     const res = await fetch(`${API}/api/ads/${id}`, {
-      cache: 'no-store',
+      ...(token ? { cache: 'no-store' } : { next: { revalidate: 60 } }),
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     if (!res.ok) return null;
