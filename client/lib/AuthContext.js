@@ -50,6 +50,13 @@ export function AuthProvider({ children }) {
     }
     setUser(null);
     toast?.info('از حساب خود خارج شدید — به امید دیدار 👋');
+    // 🔒 پاک‌سازی کش صفحات در Service Worker تا صفحات احراز‌شدهٔ این کاربر
+    // به کاربر بعدی روی همین دستگاه نشت نکند (نشت داده بین‌کاربری).
+    try {
+      navigator.serviceWorker?.controller?.postMessage('CLEAR_SESSION');
+    } catch {
+      /* ignore */
+    }
     // بستن اتصال real-time
     try {
       const { destroySocket } = await import('./useSocket');

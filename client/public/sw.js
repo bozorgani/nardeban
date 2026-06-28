@@ -8,12 +8,18 @@
  *  - API: همیشه Network-Only (داده زنده) — هرگز کش نمی‌شود
  * ------------------------------------------------------------------ */
 
-const VERSION = 'v3';
+const VERSION = 'v4';
 const STATIC_CACHE = `befrosh-static-${VERSION}`;
 const PAGE_CACHE = `befrosh-pages-${VERSION}`;
 const IMG_CACHE = `befrosh-imgs-${VERSION}`;
 const OFFLINE_URL = '/offline.html';
 const IMG_LIMIT = 60;
+
+// 🔒 مسیرهای احراز‌شده/شخصی — هرگز در PAGE_CACHE نوشته نمی‌شوند تا
+// داده‌ی یک کاربر به کاربر دیگر روی همان دستگاه نشت نکند (نشت بین‌کاربری).
+const PRIVATE_PATHS = ['/me', '/my-ads', '/favorites', '/chat', '/admin', '/saved-searches', '/auth'];
+const isPrivatePath = (pathname) =>
+  PRIVATE_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));
 
 /* ---------- نصب: پیش‌کش ضروری‌ها ---------- */
 self.addEventListener('install', (event) => {
@@ -51,6 +57,18 @@ self.addEventListener('activate', (event) => {
 /* ---------- پیام از صفحه (به‌روزرسانی فوری) ---------- */
 self.addEventListener('message', (event) => {
   if (event.data === 'SKIP_WAITING') self.skipWaiting();
+  // 🔒 هنگام خروج از حساب: کش صفحات (که ممکن است شامل صفحات احراز‌شده باشد)
+  // کاملاً پاک می‌شود تا داده‌ی کاربر قبلی به کاربر بعدی روی همین دستگاه نشت نکند.
+  if (event.data === 'CLEAR_SESSION') {
+    event.waitUntil(
+      caches.delete(PAGE_CACHE).then(() => {
+        // به همهٔ تب‌ها اطلاع بده (در صورت نیاز به واکنش)
+        return self.clients.matchAll().then((cs) =>
+          cs.forEach((c) => c.postMessage({ type: 'SESSION_CLEARED' }))
+        );
+      })
+    );
+  }
 });
 
 /* ---------- 📲 Web Push: نمایش نوتیفیکیشن چت ---------- */
@@ -166,16 +184,22 @@ self.addEventListener('fetch', (event) => {
 
   // ۴) ناوبری صفحات — Network-First با fallback
   if (request.mode === 'navigate') {
+    const isPrivate = isPrivatePath(url.pathname);
     event.respondWith(
       fetch(request)
         .then((res) => {
-          if (res.ok) {
+          // 🔒 صفحات احراز‌شده/شخصی هرگز کش نمی‌شوند (جلوگیری از نشت بین‌کاربری).
+          // فقط صفحات عمومی (فید، آگهی، دسته‌ها، ...) در PAGE_CACHE نوشته می‌شوند.
+          if (res.ok && !isPrivate) {
             const clone = res.clone();
             caches.open(PAGE_CACHE).then((c) => c.put(request, clone));
           }
           return res;
         })
         .catch(async () => {
+          // در حالت آفلاین: برای مسیر خصوصی هرگز نسخهٔ کش‌شده را نشان نده
+          // (ممکن است متعلق به کاربر قبلی باشد) → صفحهٔ آفلاین.
+          if (isPrivate) return caches.match(OFFLINE_URL);
           const cached = await caches.match(request);
           return cached || caches.match(OFFLINE_URL);
         })
