@@ -11,7 +11,7 @@ const ContactBox = dynamic(() => import('./ContactBox'));
 const Gallery = dynamic(() => import('./Gallery'));
 const ReportButton = dynamic(() => import('../../../components/ReportButton'));
 const ShareButton = dynamic(() => import('../../../components/ShareButton'));
-const ViewCounter = dynamic(() => import('./ViewCounter'), { ssr: false });
+const ViewCounterMount = dynamic(() => import('./ViewCounterMount'));
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
@@ -194,7 +194,7 @@ export default async function AdPage({ params }) {
       />
 
       {/* ثبت بازدید فقط برای آگهی فعال و یک‌بار در مرورگر (FE-01) */}
-      {ad.status === 'active' && <ViewCounter adId={String(ad._id)} />}
+      {ad.status === 'active' && <ViewCounterMount adId={String(ad._id)} />}
 
       {/* بنر وضعیت بررسی (فقط مالک/ادمین این صفحه را در این وضعیت می‌بینند) */}
       {ad.status === 'pending' && (
