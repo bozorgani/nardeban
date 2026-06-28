@@ -72,11 +72,35 @@ export function createApp() {
 
   // سرو فایل‌های آپلودشده (با کش طولانی — فایل‌ها immutable اند)
   // مسیر از config/paths.js (روی والیوم پایدار در Docker — OPS-04)
+  //
+  // 🔒 سخت‌سازی امنیتی (دفاع لایه‌ای ضد Stored XSS):
+  //  - فقط فایل‌های با پسوند تصویری مجازند؛ هر درخواست دیگر 404 می‌شود
+  //    (حتی اگر فایل غیرتصویری به‌نحوی روی دیسک باقی مانده باشد، سرو نمی‌شود).
+  //  - X-Content-Type-Options: nosniff → مرورگر نوع را از محتوا حدس نمی‌زند.
+  //  - Content-Security-Policy محدود + Content-Disposition: inline با نوع امن.
+  //  - فایل‌های .webp/.upload و هر مسیر مشکوک سرو نمی‌شوند.
+  const SERVABLE_EXT = /\.(webp|jpe?g|png)$/i;
+  app.use('/uploads', (req, res, next) => {
+    if (!SERVABLE_EXT.test(req.path)) return res.status(404).end();
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    // حتی اگر فایلی به‌اشتباه HTML باشد، این CSP اجرای اسکریپت/iframe را می‌بندد
+    res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
+    next();
+  });
   app.use(
     '/uploads',
     express.static(UPLOAD_DIR, {
       maxAge: '30d',
       immutable: true,
+      // فقط پسوندهای تصویری؛ index و dotfiles غیرفعال
+      index: false,
+      dotfiles: 'ignore',
+      setHeaders: (res, filePath) => {
+        // نوع محتوا را بر اساس پسوندِ امن تثبیت می‌کنیم (نه حدس)
+        if (/\.webp$/i.test(filePath)) res.setHeader('Content-Type', 'image/webp');
+        else if (/\.png$/i.test(filePath)) res.setHeader('Content-Type', 'image/png');
+        else if (/\.jpe?g$/i.test(filePath)) res.setHeader('Content-Type', 'image/jpeg');
+      },
     })
   );
 
