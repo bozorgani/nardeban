@@ -128,6 +128,13 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
   const [imageFile, setImageFile] = useState(null); // عکس انتخاب‌شده برای ارسال
   const [imagePreview, setImagePreview] = useState(null);
   const [lightbox, setLightbox] = useState(null); // عکس بازشده تمام‌صفحه
+  // بستن لایت‌باکس با کلید Escape (a11y)
+  useEffect(() => {
+    if (!lightbox) return;
+    const onKey = (e) => { if (e.key === 'Escape') setLightbox(null); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [lightbox]);
   const [otherTyping, setOtherTyping] = useState(false);
   const [otherOnline, setOtherOnline] = useState(false);
   const [connected, setConnected] = useState(true);
@@ -225,26 +232,39 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
   }, [conversationId, socket]);
 
   /* ---------- fallback polling فقط وقتی سوکت قطع است ---------- */
+  // ⚠️ به messages وابسته نیست؛ وگرنه هر پیام جدید interval را بازسازی می‌کرد
+  // و polling عملاً هیچ‌وقت پایدار اجرا نمی‌شد. آخرین پیام داخل setMessages
+  // (از prev) خوانده می‌شود تا dependency حذف شود.
+  const lastIdRef = useRef(null);
   useEffect(() => {
     if (connected) return;
     const t = setInterval(async () => {
       try {
-        const last = messages.at(-1)?._id;
+        const last = lastIdRef.current;
         const d = await api(
           `/chat/conversations/${conversationId}/messages${last ? `?after=${last}` : ''}`
         );
         if (d.messages.length) {
-          setMessages((prev) => [
-            ...prev,
-            ...d.messages.filter((m) => !prev.some((p) => p._id === m._id)),
-          ]);
+          setMessages((prev) => {
+            const merged = [
+              ...prev,
+              ...d.messages.filter((m) => !prev.some((p) => p._id === m._id)),
+            ];
+            lastIdRef.current = merged.at(-1)?._id || null;
+            return merged;
+          });
           setTimeout(scrollDown, 40);
         }
       } catch { /* ignore */ }
     }, 4000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connected, conversationId, messages]);
+  }, [connected, conversationId]);
+
+  // همگام نگه‌داشتن lastIdRef با آخرین پیام (برای شروع درست polling)
+  useEffect(() => {
+    lastIdRef.current = messages.at(-1)?._id || null;
+  }, [messages]);
 
   /* ---------- اعلام «در حال نوشتن» (throttle ۱.۵ ثانیه) ---------- */
   const handleTyping = (value) => {

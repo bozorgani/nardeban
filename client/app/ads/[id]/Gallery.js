@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { imgUrl } from '../../../lib/api';
+import { imgUrl, thumbUrl } from '../../../lib/api';
 
 export default function Gallery({ images = [], title, icon }) {
   const [active, setActive] = useState(0);
@@ -33,11 +33,13 @@ export default function Gallery({ images = [], title, icon }) {
         {images.length > 1 && (
           <>
             {/* فلش‌ها */}
+            {/* فلش‌ها: روی موبایل همیشه دیده می‌شوند (تاچ)، روی دسکتاپ با hover.
+                opacity-100 پیش‌فرض + md:opacity-0 md:group-hover:opacity-100 */}
             <button
               type="button"
               onClick={next}
               aria-label="بعدی"
-              className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-700 opacity-0 shadow-md transition group-hover:opacity-100"
+              className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-700 opacity-100 shadow-md transition md:opacity-0 md:group-hover:opacity-100"
             >
               ‹
             </button>
@@ -45,7 +47,7 @@ export default function Gallery({ images = [], title, icon }) {
               type="button"
               onClick={prev}
               aria-label="قبلی"
-              className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-700 opacity-0 shadow-md transition group-hover:opacity-100"
+              className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-gray-700 opacity-100 shadow-md transition md:opacity-0 md:group-hover:opacity-100"
             >
               ›
             </button>
@@ -70,7 +72,7 @@ export default function Gallery({ images = [], title, icon }) {
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={imgUrl(img)} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+              <img src={thumbUrl(img)} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
             </button>
           ))}
         </div>

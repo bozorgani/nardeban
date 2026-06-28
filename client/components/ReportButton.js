@@ -6,6 +6,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
 import { useToast } from './Toast';
+import { useModalA11y } from '../lib/useModalA11y';
 
 export default function ReportButton({ adId, ownerId }) {
   const { user } = useAuth();
@@ -14,6 +15,7 @@ export default function ReportButton({ adId, ownerId }) {
   const toast = useToast();
 
   const [open, setOpen] = useState(false);
+  const dialogRef = useModalA11y(open, () => setOpen(false));
   const [reasons, setReasons] = useState([]);
   const [reason, setReason] = useState('');
   const [details, setDetails] = useState('');
@@ -83,7 +85,7 @@ export default function ReportButton({ adId, ownerId }) {
       {open &&
         typeof document !== 'undefined' &&
         createPortal(
-          <div className="fixed inset-0 z-[85] flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true">
+          <div className="fixed inset-0 z-[85] flex items-end justify-center p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" ref={dialogRef}>
             <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={() => setOpen(false)} />
             <div className="dialog-in relative max-h-[88vh] w-full overflow-y-auto rounded-t-3xl bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:max-w-md sm:rounded-3xl sm:shadow-2xl">
               <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-200 sm:hidden" />

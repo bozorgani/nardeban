@@ -55,11 +55,24 @@ export default function MyAdsPage() {
   }, [loading, user, router]);
 
   const setStatus = async (id, status) => {
+    // optimistic با rollback: مقدار قبلی را نگه می‌داریم تا در صورت خطای سرور
+    // دقیقاً به همان حالت برگردیم (جلوگیری از ناهمگامی UI با سرور).
+    let prevStatus;
+    setAds((prev) =>
+      prev.map((a) => {
+        if (a._id === id) {
+          prevStatus = a.status;
+          return { ...a, status };
+        }
+        return a;
+      })
+    );
     try {
       await api(`/ads/${id}`, { method: 'PATCH', body: { status } });
-      setAds((prev) => prev.map((a) => (a._id === id ? { ...a, status } : a)));
       toast.success('وضعیت آگهی به‌روزرسانی شد');
     } catch (err) {
+      // rollback به وضعیت قبلی
+      setAds((prev) => prev.map((a) => (a._id === id ? { ...a, status: prevStatus } : a)));
       toast.error(err.message);
     }
   };

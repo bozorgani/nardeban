@@ -8,6 +8,7 @@ import { usePush } from '../../lib/usePush';
 import { api, CITIES } from '../../lib/api';
 import { useToast } from '../../components/Toast';
 import { SkeletonBox } from '../../components/Skeleton';
+import { useModalA11y } from '../../lib/useModalA11y';
 
 /* ---------- آیکون‌های SVG ---------- */
 const Icon = {
@@ -86,6 +87,7 @@ function EditProfileSheet({ user, open, onClose, onSaved }) {
   const [name, setName] = useState(user?.name || '');
   const [city, setCity] = useState(user?.city || '');
   const [busy, setBusy] = useState(false);
+  const dialogRef = useModalA11y(open, onClose);
 
   useEffect(() => {
     if (open) {
@@ -111,7 +113,7 @@ function EditProfileSheet({ user, open, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" ref={dialogRef}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
       <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:inset-x-auto md:left-1/2 md:top-1/2 md:bottom-auto md:w-[420px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:shadow-2xl">
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-200 md:hidden" />

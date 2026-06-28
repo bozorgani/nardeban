@@ -1,10 +1,13 @@
 import Link from 'next/link';
+import { cache } from 'react';
 import AdCard from '../../../components/AdCard';
 import RatingSection from './RatingSection';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
-async function getProfile(id) {
+// cache(): در یک درخواست SSR، getProfile فقط یک‌بار fetch می‌شود حتی اگر هم در
+// generateMetadata و هم در خود صفحه صدا زده شود (حذف fetch دوبارهٔ پروفایل).
+const getProfile = cache(async (id) => {
   try {
     const res = await fetch(`${API}/api/users/${id}/profile`, { cache: 'no-store' });
     if (!res.ok) return null;
@@ -12,7 +15,7 @@ async function getProfile(id) {
   } catch {
     return null;
   }
-}
+});
 
 export async function generateMetadata({ params }) {
   const { id } = await params;

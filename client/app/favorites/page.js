@@ -29,10 +29,25 @@ export default function FavoritesPage() {
       icon: '💔',
     });
     if (!ok) return;
-    await Promise.allSettled(favs.map((f) => api(`/users/favorites/${f._id}`, { method: 'POST' })));
-    setFavs([]);
-    refresh();
-    toast.success('همهٔ نشان‌ها حذف شدند');
+    const results = await Promise.allSettled(
+      favs.map((f) => api(`/users/favorites/${f._id}`, { method: 'POST' }))
+    );
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    // به‌جای پاک‌کردن کورکورانهٔ UI، با سرور همگام می‌شویم تا حقیقت نمایش داده شود
+    try {
+      const d = await api('/users/favorites');
+      setFavs(d.favorites);
+    } catch {
+      /* اگر sync نشد، حداقل UI را دست‌نخورده نگه می‌داریم */
+    }
+    await refresh();
+    if (failed === 0) {
+      toast.success('همهٔ نشان‌ها حذف شدند');
+    } else if (failed === favs.length) {
+      toast.error('حذف نشان‌ها ناموفق بود — دوباره تلاش کنید');
+    } else {
+      toast.warning(`${Number(failed).toLocaleString('fa-IR')} مورد حذف نشد — دوباره تلاش کنید`);
+    }
   };
 
   if (loading || !user || favs === null)

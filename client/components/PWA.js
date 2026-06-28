@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 /**
  * مدیریت PWA:
@@ -12,6 +13,19 @@ export default function PWA() {
   const [waitingSW, setWaitingSW] = useState(null);
   const [installEvent, setInstallEvent] = useState(null);
   const [showInstall, setShowInstall] = useState(false);
+  const router = useRouter();
+
+  /* ---------- ناوبری به‌درخواست SW (کلیک روی نوتیف در مرورگرهای بدون client.navigate) ---------- */
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const onMessage = (event) => {
+      if (event.data?.type === 'NAVIGATE' && event.data.url) {
+        router.push(event.data.url);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  }, [router]);
 
   /* ---------- ثبت SW ---------- */
   useEffect(() => {

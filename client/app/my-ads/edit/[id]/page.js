@@ -21,6 +21,16 @@ const MapPicker = dynamic(() => import('../../../../components/MapPicker'), {
 
 const CONDITIONS = ['نو', 'در حد نو', 'کارکرده', 'نیاز به تعمیر'];
 
+// اعتبارسنجی عکس — هم‌راستا با /new و multer بک‌اند
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // ۵ مگابایت
+const MAX_FILES = 5;
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+function humanSize(bytes) {
+  if (bytes >= 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toLocaleString('fa-IR', { maximumFractionDigits: 1 })} مگابایت`;
+  return `${Math.round(bytes / 1024).toLocaleString('fa-IR')} کیلوبایت`;
+}
+
 export default function EditAdPage({ params }) {
   const { id } = use(params);
   const router = useRouter();
@@ -98,9 +108,41 @@ export default function EditAdPage({ params }) {
   const totalImages = keepImages.length + newFiles.length;
 
   const onFiles = (e) => {
-    const incoming = Array.from(e.target.files).slice(0, 5 - totalImages);
-    setNewFiles((prev) => [...prev, ...incoming]);
-    setNewPreviews((prev) => [...prev, ...incoming.map((f) => URL.createObjectURL(f))]);
+    setError('');
+    const incoming = Array.from(e.target.files);
+
+    // اعتبارسنجی نوع و حجم در لحظهٔ انتخاب (مثل /new) — جلوگیری از خطا در ذخیرهٔ نهایی
+    const accepted = [];
+    const errors = [];
+    for (const f of incoming) {
+      if (!ALLOWED_TYPES.includes(f.type)) {
+        errors.push(`«${f.name}»: فقط JPG/PNG/WebP مجاز است`);
+        continue;
+      }
+      if (f.size > MAX_FILE_SIZE) {
+        errors.push(`«${f.name}» ${humanSize(f.size)} است — حداکثر ${humanSize(MAX_FILE_SIZE)}`);
+        continue;
+      }
+      accepted.push(f);
+    }
+
+    // سقف تعداد کل (عکس‌های نگه‌داشته‌شده + جدیدها)
+    const room = MAX_FILES - totalImages;
+    const toAdd = accepted.slice(0, Math.max(0, room));
+    if (accepted.length > toAdd.length) {
+      errors.push(`حداکثر ${MAX_FILES.toLocaleString('fa-IR')} عکس مجاز است`);
+    }
+
+    if (errors.length) {
+      const msg = errors.join(' — ');
+      setError(msg);
+      toast?.error(msg, { title: 'عکس رد شد', duration: 6000 });
+    }
+
+    if (toAdd.length) {
+      setNewFiles((prev) => [...prev, ...toAdd]);
+      setNewPreviews((prev) => [...prev, ...toAdd.map((f) => URL.createObjectURL(f))]);
+    }
     e.target.value = '';
   };
 

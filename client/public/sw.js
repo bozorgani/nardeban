@@ -8,7 +8,7 @@
  *  - API: همیشه Network-Only (داده زنده) — هرگز کش نمی‌شود
  * ------------------------------------------------------------------ */
 
-const VERSION = 'v5';
+const VERSION = 'v6';
 const STATIC_CACHE = `befrosh-static-${VERSION}`;
 const PAGE_CACHE = `befrosh-pages-${VERSION}`;
 const IMG_CACHE = `befrosh-imgs-${VERSION}`;
@@ -124,6 +124,43 @@ self.addEventListener('notificationclick', (event) => {
       // وگرنه پنجره جدید
       return self.clients.openWindow(url);
     })
+  );
+});
+
+/* ---------- 🔁 تمدید خودکار اشتراک Push وقتی مرورگر آن را rotate می‌کند ----------
+ * بدون این هندلر، اشتراک‌های Push بی‌صدا منقضی می‌شوند و کاربر دیگر نوتیف نمی‌گیرد.
+ * VAPID public key را از API می‌گیریم، دوباره subscribe می‌کنیم و به سرور می‌فرستیم. */
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil(
+    (async () => {
+      try {
+        const res = await fetch('/api/push/vapid-public-key');
+        const { key, enabled } = await res.json();
+        if (!enabled || !key) return;
+        const sub = await self.registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(key),
+        });
+        // credentials:include تا کوکی احراز هویت ارسال شود
+        await fetch('/api/push/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(sub),
+        });
+      } catch {
+        /* اگر کاربر آفلاین/لاگ‌اوت است، دفعهٔ بعد usePush دوباره subscribe می‌کند */
+      }
+    })()
   );
 });
 

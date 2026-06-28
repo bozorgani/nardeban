@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../lib/AuthContext';
+import { useModalA11y } from '../lib/useModalA11y';
 
 /**
  * شیت «نام شما» — قبل از شروع چت، اگر کاربر نام نداشته باشد باز می‌شود.
@@ -14,6 +15,7 @@ export default function NamePrompt({ open, onClose, onDone }) {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const dialogRef = useModalA11y(open, onClose);
 
   if (!open || typeof document === 'undefined') return null;
 
@@ -36,7 +38,7 @@ export default function NamePrompt({ open, onClose, onDone }) {
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true">
+    <div className="fixed inset-0 z-[80]" role="dialog" aria-modal="true" ref={dialogRef}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
       <div className="absolute inset-x-0 bottom-0 rounded-t-3xl bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:inset-x-auto md:left-1/2 md:top-1/2 md:bottom-auto md:w-[400px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-3xl md:shadow-2xl">
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-200 md:hidden" />
