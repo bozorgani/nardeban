@@ -126,6 +126,8 @@ export default function RatingSection({ sellerId }) {
       setMsg('');
       loadReviews(1);
       router.refresh();
+    } catch (err) {
+      setMsg(err.message || 'حذف امتیاز انجام نشد');
     } finally {
       setBusy(false);
     }

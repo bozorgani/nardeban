@@ -8,6 +8,7 @@ import { deleteUploads } from '../utils/files.js';
 import { optimizeImages } from '../middleware/optimizeImages.js';
 import { writeLimiter } from '../middleware/limiters.js';
 import { deleteAdCascade } from '../services/adDeletion.js';
+import { buildCategoryIndex } from '../utils/categories.js';
 
 const router = Router();
 

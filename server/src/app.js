@@ -45,8 +45,11 @@ export function createApp() {
   // اعتماد کنیم (چون فقط nginx روی همان ماشین به ما پراکسی می‌کند و XFF
   // را با IP واقعی کاربر می‌سازد).
   //
-  // اگر روزی nginx را روی ماشین دیگری گذاشتید، IP/CIDR آن را اضافه کنید.
-  app.set('trust proxy', 'loopback');
+  // اگر nginx داخل Docker bridge جلوی backend باشد، loopback کافی نیست چون
+  // پراکسی از IPهای private bridge مثل 172.x یا 10.x دیده می‌شود. private/
+  // linklocal شبکه‌های داخلی رایج Docker را پوشش می‌دهد و همچنان به کل اینترنت
+  // trust بی‌قیدوشرط نمی‌دهد.
+  app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 
   // فشرده‌سازی gzip/brotli روی پاسخ‌های JSON و HTML — کاهش چشمگیر حجم انتقال و TTFB
   app.use(compression());

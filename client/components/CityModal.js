@@ -66,7 +66,7 @@ export default function CityModal({ open, onClose, selected = [], onApply }) {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
 
       {/* بدنه مودال: تمام صفحه در موبایل، وسط در دسکتاپ */}
-      <div className="absolute inset-0 flex flex-col bg-white md:inset-auto md:left-1/2 md:top-1/2 md:h-[85vh] md:w-[480px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:shadow-2xl overflow-hidden">
+      <div ref={dialogRef} className="absolute inset-0 flex flex-col overflow-hidden bg-white md:inset-auto md:left-1/2 md:top-1/2 md:h-[85vh] md:w-[480px] md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-2xl md:shadow-2xl">
         {/* هدر */}
         <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3.5">
           <button onClick={onClose} aria-label="بستن" className="text-2xl leading-none text-gray-400 hover:text-gray-600">

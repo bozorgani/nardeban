@@ -4,7 +4,7 @@ const adSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true, maxlength: 80 },
     description: { type: String, required: true, maxlength: 3000 },
-    price: { type: Number, default: 0 }, // 0 => توافقی
+    price: { type: Number, default: 0, min: 0 }, // 0 => توافقی
     isFree: { type: Boolean, default: false }, // رایگان
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
     city: { type: String, required: true, index: true },

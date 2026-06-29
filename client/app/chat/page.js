@@ -595,8 +595,11 @@ function ChatWindow({ conversationId, meId, onBack, onActivity }) {
       {/* لایت‌باکس عکس */}
       {lightbox && (
         <div
+          ref={lightboxRef}
           className="fixed inset-0 z-[90] flex items-center justify-center bg-black/90 p-4"
           onClick={() => setLightbox(null)}
+          role="dialog"
+          aria-modal="true"
         >
           <button
             className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl text-white backdrop-blur transition hover:bg-white/20"

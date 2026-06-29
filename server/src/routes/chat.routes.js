@@ -9,6 +9,7 @@ import { optimizeImages } from '../middleware/optimizeImages.js';
 import { sendPushToUser } from '../push.js';
 import { ioInstance, isUserOnline } from '../socket.js';
 import { incUnreadForRecipient, resetUnreadForReader } from '../services/conversation.js';
+import { parseCursor } from '../utils/cursor.js';
 
 const router = Router();
 router.use(requireAuth); // همهٔ مسیرهای چت نیاز به ورود دارند
@@ -143,7 +144,15 @@ router.post('/conversations', async (req, res, next) => {
 
     let conv = await Conversation.findOne({ ad: adId, buyer: req.user._id });
     if (!conv) {
-      conv = await Conversation.create({ ad: adId, buyer: req.user._id, seller: ad.owner });
+      try {
+        conv = await Conversation.create({ ad: adId, buyer: req.user._id, seller: ad.owner });
+      } catch (err) {
+        if (err?.code === 11000) {
+          conv = await Conversation.findOne({ ad: adId, buyer: req.user._id });
+        } else {
+          throw err;
+        }
+      }
     }
     res.json({ conversationId: conv._id });
   } catch (err) {

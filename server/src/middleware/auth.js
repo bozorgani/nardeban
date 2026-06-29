@@ -40,7 +40,10 @@ export async function optionalAuth(req, _res, next) {
     const token = getTokenFromReq(req);
     if (token) {
       const payload = jwt.verify(token, JWT_SECRET);
-      req.user = await User.findById(payload.id);
+      const user = await User.findById(payload.id);
+      if (user && !user.isBlocked && (payload.tv || 0) === (user.tokenVersion || 0)) {
+        req.user = user;
+      }
     }
   } catch {
     /* ignore */

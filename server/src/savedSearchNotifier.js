@@ -20,7 +20,7 @@ async function checkOnce() {
         continue;
 
       const since = s.lastNotifiedAt || s.lastCheckedAt || s.createdAt;
-      const filter = await buildFilter(s);
+      const filter = await buildFilter(s, catIndex);
       filter.createdAt = { $gt: since };
 
       const count = await Ad.countDocuments(filter);

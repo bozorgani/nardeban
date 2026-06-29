@@ -46,7 +46,7 @@ function baseFilter(s) {
  *   نوادگان دسته از حافظه resolve می‌شوند (بدون کوئری per جستجو → رفع N+1).
  *   اگر داده نشود، fallback به BFS دیتابیس (برای سازگاری با notifier).
  */
-async function buildFilter(s, catIndex = null) {
+export async function buildFilter(s, catIndex = null) {
   const filter = baseFilter(s);
 
   if (s.category) {
@@ -197,5 +197,4 @@ router.delete('/:id', async (req, res, next) => {
   }
 });
 
-export { buildFilter };
 export default router;

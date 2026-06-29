@@ -3,6 +3,7 @@ import Ad from '../models/Ad.js';
 import Conversation from '../models/Conversation.js';
 import Message from '../models/Message.js';
 import Report from '../models/Report.js';
+import User from '../models/User.js';
 import { deleteUploads } from '../utils/files.js';
 
 /**

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useModalA11y } from '../lib/useModalA11y';
 
 /**
  * سیستم اعلان سراسری بفروش (بدون کتابخانه):
@@ -93,7 +94,7 @@ function ConfirmDialog({ dialog, onResolve }) {
   return (
     <div className={`fixed inset-0 z-[95] flex items-end justify-center p-4 transition-opacity duration-200 sm:items-center ${closing ? 'opacity-0' : 'opacity-100'}`}>
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={() => resolve(false)} />
-      <div className={`relative w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl transition-transform duration-200 ${closing ? 'scale-95' : 'dialog-in'}`} role="alertdialog" aria-modal="true">
+      <div ref={dialogRef} className={`relative w-full max-w-sm rounded-3xl bg-white p-6 shadow-2xl transition-transform duration-200 ${closing ? 'scale-95' : 'dialog-in'}`} role="alertdialog" aria-modal="true">
         <span className={`mx-auto flex h-14 w-14 items-center justify-center rounded-2xl text-2xl ${dialog.danger ? 'bg-red-50' : 'bg-brand-light'}`}>
           {dialog.icon || (dialog.danger ? '🗑️' : '❓')}
         </span>

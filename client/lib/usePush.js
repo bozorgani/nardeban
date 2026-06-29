@@ -19,6 +19,9 @@ function urlBase64ToUint8Array(base64String) {
 async function getSWRegistration() {
   let reg = await navigator.serviceWorker.getRegistration('/');
   if (!reg) {
+    if (process.env.NODE_ENV !== 'production') {
+      throw new Error('فعال‌سازی نوتیفیکیشن فقط در build production پشتیبانی می‌شود');
+    }
     reg = await navigator.serviceWorker.register('/sw.js');
   }
   // صبر تا فعال شدن (حداکثر ۱۰ ثانیه)

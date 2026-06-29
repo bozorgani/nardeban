@@ -63,30 +63,63 @@ router.post('/request-otp', async (req, res, next) => {
       console.log(`🔑 [OTP] کد ${phone}: ${code}  (انقضا: ${expires.toLocaleTimeString('fa-IR')})`);
     }
 
-    // به‌روزرسانی پنجرهٔ شمارش per-phone: اگر پنجره گذشته یا کاربر جدید است،
-    // پنجره را ریست و شمارنده را ۱ می‌گذاریم؛ وگرنه شمارنده را +۱ می‌کنیم.
-    const existing = await User.findOne({ phone }).select('+otpRequestWindowStart');
-    const now = Date.now();
-    const winStart = existing?.otpRequestWindowStart?.getTime() || 0;
-    const windowExpired = now - winStart >= OTP_PHONE_WINDOW_MS;
+    // 🔒 محدودیت per-phone باید اتمیک باشد؛ اگر check و increment جدا باشند،
+    // چند درخواست همزمان همگی از check رد می‌شوند و SMSهای متعدد می‌فرستند.
+    // اینجا کل منطق پنجره + افزایش شمارنده + ذخیره OTP را در یک update pipeline
+    // انجام می‌دهیم و بعد نتیجهٔ نهایی را بررسی می‌کنیم.
+    const updated = await User.findOneAndUpdate(
+      { phone },
+      [
+        {
+          $set: {
+            phone,
+            _now: new Date(now),
+            _windowExpired: {
+              $or: [
+                { $eq: ['$otpRequestWindowStart', null] },
+                {
+                  $gte: [
+                    { $subtract: [new Date(now), { $ifNull: ['$otpRequestWindowStart', new Date(0)] }] },
+                    OTP_PHONE_WINDOW_MS,
+                  ],
+                },
+              ],
+            },
+          },
+        },
+        {
+          $set: {
+            otpRequestWindowStart: {
+              $cond: ['$_windowExpired', '$_now', '$otpRequestWindowStart'],
+            },
+            otpRequestCount: {
+              $cond: ['$_windowExpired', 1, { $add: [{ $ifNull: ['$otpRequestCount', 0] }, 1] }],
+            },
+            otpHash: hashOtp(code, phone),
+            otpExpires: expires,
+            otpAttempts: 0,
+            otpLockedUntil: null,
+          },
+        },
+        { $unset: ['_now', '_windowExpired'] },
+      ],
+      {
+        upsert: true,
+        new: true,
+        includeResultMetadata: true,
+        select: '+otpRequestCount +otpRequestWindowStart',
+      }
+    );
 
-    const update = {
-      $set: {
-        phone,
-        otpHash: hashOtp(code, phone), // فقط هش ذخیره می‌شود (SEC-08)
-        otpExpires: expires,
-        otpAttempts: 0, // ریست شمارندهٔ تلاش با هر کد جدید
-        otpLockedUntil: null,
-      },
-    };
-    if (windowExpired) {
-      update.$set.otpRequestWindowStart = new Date(now);
-      update.$set.otpRequestCount = 1;
-    } else {
-      update.$inc = { otpRequestCount: 1 };
+    const user = updated?.value || updated;
+    const createdNow = Boolean(updated?.lastErrorObject?.upserted);
+    if (!createdNow && (user?.otpRequestCount || 0) > MAX_OTP_PER_PHONE) {
+      const winStart = user?.otpRequestWindowStart?.getTime() || now;
+      const mins = Math.ceil(Math.max(0, OTP_PHONE_WINDOW_MS - (now - winStart)) / 60000);
+      return res.status(429).json({
+        message: `برای این شماره درخواست کد بیش از حد بوده — ${mins} دقیقه دیگر تلاش کنید`,
+      });
     }
-
-    await User.findOneAndUpdate({ phone }, update, { upsert: true, new: true });
 
     // ارسال کد با سرویس پیامک. در پروداکشن باید ارائه‌دهنده تنظیم شده باشد؛
     // در غیر این صورت sendOtp خطا می‌دهد و کد هرگز در پاسخ لو نمی‌رود (SEC-01).
@@ -228,7 +261,13 @@ router.get('/me', async (req, res) => {
     if (!token) return res.json({ user: null });
     const payload = jwt.verify(token, JWT_SECRET);
     const user = await User.findById(payload.id);
-    if (!user || user.isBlocked) return res.json({ user: null });
+    if (
+      !user ||
+      user.isBlocked ||
+      (payload.tv || 0) !== (user.tokenVersion || 0)
+    ) {
+      return res.json({ user: null });
+    }
     const { _id, phone, name, city, favorites, role } = user;
     res.json({ user: { id: _id, phone, name, city, favorites, role } });
   } catch {

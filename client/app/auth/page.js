@@ -31,6 +31,7 @@ function AuthForm() {
   const [timer, setTimer] = useState(0);
   const codeRef = useRef(null);
   const submittingRef = useRef(false); // گارد همزمانی قطعی (state ناهمگام است) — UX-04
+  const authFlowIdRef = useRef(0);
 
   // شمارش معکوس ارسال مجدد
   useEffect(() => {

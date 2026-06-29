@@ -43,7 +43,6 @@ export default function AdMap({ lat, lng }) {
 
       const map = L.map(el.current, {
         zoomControl: false,
-        attributionControl: false,
         dragging: false,
         scrollWheelZoom: false,
         doubleClickZoom: false,
